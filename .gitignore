@@ -1,0 +1,9 @@
+# Archivos temporales de Office y del sistema
+~$*
+*.tmp
+*.bak
+Thumbs.db
+.DS_Store
+
+# Exportaciones locales de los grupos
+*-entrega.md

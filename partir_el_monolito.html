@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Taller interactivo de microservicios: partir el monolito de Inventarium, medir el costo de cada frontera, someter el diseño a eventos de caos y diseñar una saga.">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Partir el monolito · Taller de microservicios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#ECEFF4; --surface:#FBFCFE; --sunk:#DFE4EC;
+  --ink:#141A24; --ink-2:#38424F; --muted:#68717F; --line:#D5DBE4; --line-2:#BEC6D2;
+  --real:#17518F; --doble:#9A2E63; --fuera:#8A93A1;
+  --real-soft:#DDE8F6; --doble-soft:#F7E3EC; --fuera-soft:#E5E9EF;
+  --ok:#1B6B4C; --warn:#8B5E12; --bad:#A5342D; --neutral:#4F5967;
+  --ok-soft:#DCEEE5; --warn-soft:#F6EBD5; --bad-soft:#F8E1DF; --neutral-soft:#E3E7ED;
+  --shadow:0 1px 2px rgba(20,26,36,.05), 0 12px 28px -20px rgba(20,26,36,.45);
+  --fd:'Archivo','Segoe UI',system-ui,sans-serif;
+  --fb:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --fm:'IBM Plex Mono','Cascadia Mono',Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#11161F; --surface:#19202A; --sunk:#212934;
+    --ink:#E4EAF2; --ink-2:#B9C3D0; --muted:#8A94A2; --line:#2A3441; --line-2:#3B4756;
+    --real:#6FA8E8; --doble:#E68CB5; --fuera:#79828F;
+    --real-soft:#152840; --doble-soft:#331825; --fuera-soft:#222A34;
+    --ok:#4FAD82; --warn:#CF9A44; --bad:#E2776E; --neutral:#98A2B0;
+    --ok-soft:#112A20; --warn-soft:#2C2211; --bad-soft:#2F1614; --neutral-soft:#242C36;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 28px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#11161F; --surface:#19202A; --sunk:#212934;
+  --ink:#E4EAF2; --ink-2:#B9C3D0; --muted:#8A94A2; --line:#2A3441; --line-2:#3B4756;
+  --real:#6FA8E8; --doble:#E68CB5; --fuera:#79828F;
+  --real-soft:#152840; --doble-soft:#331825; --fuera-soft:#222A34;
+  --ok:#4FAD82; --warn:#CF9A44; --bad:#E2776E; --neutral:#98A2B0;
+  --ok-soft:#112A20; --warn-soft:#2C2211; --bad-soft:#2F1614; --neutral-soft:#242C36;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 28px -20px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--fb);font-size:16.5px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;padding:0 20px 70px}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2,h3,h4{font-family:var(--fd);text-wrap:balance;margin:0;line-height:1.15;letter-spacing:-.014em}
+p{margin:0}
+code{font-family:var(--fm);font-size:.86em}
+a{color:var(--real)}
+.eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.mono{font-family:var(--fm)}
+
+header.hero{padding:54px 0 34px;border-bottom:1px solid var(--line);position:relative}
+.hero h1{font-size:clamp(36px,6.2vw,62px);font-weight:700;max-width:16ch;margin-top:14px}
+.hero h1 em{font-style:normal;color:var(--real)}
+.hero .sub{margin-top:20px;max-width:66ch;font-size:18.5px;color:var(--ink-2)}
+.thesis{margin-top:24px;border-left:3px solid var(--doble);padding:3px 0 3px 18px;max-width:62ch;font-size:18.5px}
+.key{margin-top:30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--surface)}
+.key>div{padding:14px 17px;border-right:1px solid var(--line)}
+.key>div:last-child{border-right:0}
+.key b{font-family:var(--fd);font-size:14.5px;display:flex;align-items:center;gap:9px;font-weight:600}
+.key .dot{width:14px;height:14px;border-radius:2px;flex:none;border:2px solid}
+.key p{font-size:14px;color:var(--muted);margin-top:4px;line-height:1.45}
+.topbar{position:absolute;top:18px;right:0;display:flex;gap:8px;align-items:center}
+@media (max-width:760px){.topbar{position:static;margin-top:18px;flex-wrap:wrap}}
+
+section.lab{padding:52px 0;border-bottom:1px solid var(--line)}
+.lab-head{display:flex;gap:15px;align-items:baseline}
+.lab-num{font-family:var(--fm);font-size:12px;font-weight:600;color:var(--doble);letter-spacing:.08em;flex:none}
+.lab h2{font-size:clamp(24px,3.3vw,33px);font-weight:600}
+.lab h3{font-size:20px;font-weight:600;margin-top:34px}
+.lab .lede{max-width:70ch;margin-top:13px;color:var(--ink-2)}
+.stage{margin-top:26px;background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  box-shadow:var(--shadow);overflow:hidden}
+.stage-body{padding:20px;min-width:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 330px}
+.split>.rail{border-left:1px solid var(--line);padding:19px;background:var(--sunk);min-width:0}
+@media (max-width:900px){.split{grid-template-columns:1fr}.split>.rail{border-left:0;border-top:1px solid var(--line)}}
+
+.ctl{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:11px 17px;border-bottom:1px solid var(--line);background:var(--sunk)}
+button{font-family:var(--fd);font-size:13.5px;font-weight:600;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line-2);border-radius:3px;padding:6px 12px;cursor:pointer;line-height:1.25}
+button:hover:not(:disabled){border-color:var(--ink-2)}
+button:disabled{opacity:.35;cursor:default}
+button.primary{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+button.on{background:var(--real);border-color:var(--real);color:#fff}
+:root[data-theme="dark"] button.on{color:#0C121A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button.on{color:#0C121A}}
+button.small{font-size:12px;padding:3px 8px}
+:focus-visible{outline:2px solid var(--doble);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:3px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line-2)}
+.seg button:last-child{border-right:0}
+.count{font-family:var(--fm);font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.ctl label{font-family:var(--fm);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.ctl input[type=number],.ctl input[type=text],.ctl select,select.inp,input.inp{font-family:var(--fm);font-size:13px;padding:5px 7px;border:1px solid var(--line-2);
+  border-radius:3px;background:var(--surface);color:var(--ink)}
+.ctl input[type=number]{width:84px}
+
+.rail h4{font-family:var(--fm);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  font-weight:500;margin-bottom:10px}
+.rail-block+.rail-block{margin-top:22px}
+.narration{font-size:14.8px;color:var(--ink-2);line-height:1.5}
+.narration b{color:var(--ink);font-weight:600}
+.narration p+p{margin-top:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:11.5px;font-weight:500;
+  padding:2px 7px;border-radius:2px;border:1px solid var(--line-2);color:var(--muted);background:var(--surface);white-space:nowrap}
+.pill.real{color:var(--real);border-color:var(--real);background:var(--real-soft)}
+.pill.doble{color:var(--doble);border-color:var(--doble);background:var(--doble-soft)}
+.pill.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.pill.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.pill.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-soft)}
+.pill.neutral{color:var(--neutral);border-color:var(--line-2);background:var(--neutral-soft)}
+
+pre{font-family:var(--fm);font-size:12.8px;line-height:1.62;background:var(--sunk);border:1px solid var(--line);
+  border-radius:3px;padding:13px 15px;overflow-x:auto;margin:0;color:var(--ink-2)}
+.note{margin-top:24px;padding:15px 18px;background:var(--real-soft);border:1px solid var(--real);
+  border-radius:3px;font-size:15.5px;max-width:80ch;color:var(--ink)}
+.note.warn{background:var(--warn-soft);border-color:var(--warn)}
+.note.doble{background:var(--doble-soft);border-color:var(--doble)}
+.note b{font-family:var(--fd)}
+
+table{border-collapse:collapse;width:100%;font-size:13px}
+.tbl th{font-family:var(--fm);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+  text-align:left;font-weight:500;padding:6px 9px;border-bottom:1px solid var(--line-2);vertical-align:bottom}
+.tbl td{font-family:var(--fm);padding:6px 9px;border-bottom:1px solid var(--line);color:var(--ink-2);
+  font-variant-numeric:tabular-nums;vertical-align:top}
+.tbl td.n,.tbl th.n{text-align:right}
+.tbl td.name{font-family:var(--fb);font-size:13.5px;color:var(--ink)}
+.tbl td.name small{display:block;font-family:var(--fm);font-size:10.5px;color:var(--muted)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover td{background:var(--sunk)}
+.tbl td.ok{color:var(--ok);font-weight:600} .tbl td.bad{color:var(--bad);font-weight:600} .tbl td.warn{color:var(--warn);font-weight:600}
+.scroller{overflow-x:auto}
+.empty{font-family:var(--fm);font-size:12.5px;color:var(--muted);padding:12px 10px;border:1px dashed var(--line-2);
+  border-radius:3px;text-align:center}
+.result{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.result b{font-family:var(--fd);font-size:25px;font-weight:700;letter-spacing:-.02em}
+.result.ok b{color:var(--ok)} .result.bad b{color:var(--bad)}
+.result.warn b{color:var(--warn)} .result.neutral b{color:var(--neutral)}
+
+/* ---- tablero ---- */
+.board{display:grid;grid-template-columns:230px minmax(0,1fr)}
+@media (max-width:760px){.board{grid-template-columns:1fr}}
+.tray{background:var(--sunk);border-right:1px solid var(--line);padding:14px;min-width:0}
+.tray h5,.zone-h5{font-family:var(--fm);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 8px}
+.svcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:14px;align-content:start}
+.zone{border:1px solid var(--line-2);border-radius:3px;background:var(--surface);min-height:110px;display:flex;flex-direction:column;transition:border-color .15s,background .15s}
+.tray.zone{border:0;border-right:1px solid var(--line);border-radius:0;background:var(--sunk);min-height:0}
+.zone.over{border-color:var(--real);background:var(--real-soft)}
+.zone.target{outline:2px dashed var(--doble);outline-offset:-3px;cursor:pointer}
+.zone header{display:flex;gap:6px;align-items:center;padding:6px 7px;border-bottom:1px solid var(--line)}
+.zone header input{flex:1;min-width:0;font-family:var(--fd);font-weight:600;font-size:13.5px;border:1px solid transparent;
+  background:transparent;color:var(--ink);padding:3px 5px;border-radius:2px}
+.zone header input:hover,.zone header input:focus{border-color:var(--line-2);background:var(--sunk)}
+.zone header .cnt{font-family:var(--fm);font-size:11px;color:var(--muted)}
+.zone .body{padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;flex:1}
+.tray .body{padding:0}
+.tchip{font-family:var(--fm);font-size:12px;padding:3px 8px;border-radius:2px;border:1px solid var(--line-2);
+  background:var(--sunk);color:var(--ink-2);cursor:grab;font-weight:500}
+.svcs .tchip{background:var(--surface)}
+.tchip.sel{border-color:var(--doble);background:var(--doble-soft)!important;color:var(--ink)}
+.tchip.hl{border-color:var(--real);background:var(--real-soft)!important;color:var(--ink)}
+.tchip.hlw{border-color:var(--real);background:var(--real);color:#fff!important}
+:root[data-theme="dark"] .tchip.hlw{color:#0C121A!important}
+.hint{font-size:13px;color:var(--muted);line-height:1.45}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border-top:1px solid var(--line)}
+.kpi{padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.kpi .l{font-family:var(--fm);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-family:var(--fd);font-size:27px;font-weight:700;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:12.8px;color:var(--muted);line-height:1.4;margin-top:2px}
+.kpi.ok .v{color:var(--ok)} .kpi.warn .v{color:var(--warn)} .kpi.bad .v{color:var(--bad)}
+
+details.how{margin-top:22px;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
+details.how summary{cursor:pointer;padding:11px 15px;font-family:var(--fd);font-weight:600;font-size:14.5px}
+details.how .in{padding:4px 18px 16px;font-size:14.5px;color:var(--ink-2);max-width:86ch}
+details.how .in p,details.how .in ul{margin:8px 0 0}
+details.how .in li{margin-top:4px}
+
+/* ---- cartas ---- */
+.deck{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:16px;border-bottom:1px solid var(--line)}
+.cardx{text-align:left;display:flex;flex-direction:column;gap:6px;padding:12px 13px;min-height:118px;background:var(--surface);position:relative}
+.cardx .cn{font-family:var(--fm);font-size:11px;color:var(--doble);letter-spacing:.08em}
+.cardx .ct{font-family:var(--fd);font-size:14.5px;font-weight:600;line-height:1.25}
+.cardx .cs{font-family:var(--fb);font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.35}
+.cardx.sel{border-color:var(--doble);box-shadow:inset 0 0 0 1px var(--doble);background:var(--doble-soft)}
+.cardx .ap{position:absolute;top:9px;right:10px}
+.impact-list{margin:10px 0 0;padding-left:18px;font-size:14.3px;color:var(--ink-2)}
+.impact-list li{margin-top:5px}
+
+/* ---- saga ---- */
+.ssteps{display:grid;gap:8px}
+.sstep{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 11px;
+  border:1px solid var(--line);border-radius:3px;background:var(--sunk)}
+.sstep.failsel{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.sstep .ix{font-family:var(--fm);font-size:12px;color:var(--muted);text-align:center}
+.sstep .lb{font-size:14px;color:var(--ink);line-height:1.35}
+.sstep .lb small{display:block;font-family:var(--fm);font-size:11px;color:var(--muted);margin-top:3px}
+.sstep .ac{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.sstep select{font-family:var(--fm);font-size:12px;padding:4px 6px;border:1px solid var(--line-2);border-radius:3px;background:var(--surface);color:var(--ink)}
+.sstep label.f{font-family:var(--fm);font-size:11.5px;color:var(--muted);display:flex;gap:5px;align-items:center;cursor:pointer}
+@media (max-width:640px){.sstep{grid-template-columns:24px minmax(0,1fr)}.sstep .ac{grid-column:1/-1;justify-content:flex-start}}
+.trace{font-family:var(--fm);font-size:12.4px;line-height:1.55;border:1px solid var(--line);border-radius:3px;
+  background:var(--sunk);overflow:hidden;margin-top:14px}
+.trace div{padding:4px 10px;border-left:3px solid transparent;color:var(--ink-2);white-space:pre-wrap}
+.trace div.run{color:var(--ink);background:var(--ok-soft);border-left-color:var(--ok)}
+.trace div.hit{color:var(--ink);background:var(--bad-soft);border-left-color:var(--bad);font-weight:500}
+.trace div.comp{color:var(--ink);background:var(--warn-soft);border-left-color:var(--warn)}
+.trace div.left{color:var(--bad);border-left-color:var(--bad)}
+.trace div.info{color:var(--muted)}
+.counters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.counter{border:1px solid var(--line);border-radius:3px;padding:11px 13px;background:var(--sunk)}
+.counter .l{font-family:var(--fm);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.counter .v{font-family:var(--fd);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.counter.bad .v{color:var(--bad)} .counter.ok .v{color:var(--ok)} .counter.warn .v{color:var(--warn)}
+.bar{height:6px;background:var(--sunk);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-top:14px}
+.bar i{display:block;height:100%;width:0;background:var(--real)}
+.log{font-family:var(--fm);font-size:12.2px;line-height:1.5;color:var(--ink-2);margin-top:12px}
+.log div{padding:3px 0;border-bottom:1px solid var(--line)}
+.log div:last-child{border-bottom:0}
+
+footer{padding:44px 0 0;color:var(--muted);font-size:15px;max-width:78ch}
+footer p+p{margin-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="topbar">
+    <label class="eyebrow" for="groupName">Grupo</label>
+    <input class="inp" id="groupName" type="text" placeholder="Nombre del grupo" style="width:170px">
+    <button class="small" id="themeBtn" type="button" aria-label="Cambiar tema claro u oscuro">Tema</button>
+  </div>
+  <p class="eyebrow">Taller · Módulo 4 · Diseño y Arquitectura de Software</p>
+  <h1>Partir el <em>monolito</em></h1>
+  <p class="sub">Inventarium quiere su primera plataforma antes del Black Friday. Un proveedor le dijo al gerente que
+  «todo el mundo hace microservicios ahora». En este taller ustedes parten el sistema en servicios, ven en
+  números lo que cuesta cada frontera, lo someten a seis eventos de operación real y diseñan la transacción
+  que ya no existe.</p>
+  <p class="thesis">Un microservicio no se define por su tamaño sino por los datos de los que es dueño. Cuando la
+  frontera parte un dato que un caso de uso necesita escribir de una sola vez, ese caso de uso se vuelve una
+  transacción distribuida.</p>
+  <div class="key">
+    <div><b><span class="dot" style="border-color:var(--real);background:var(--real-soft)"></span>Servicio</b>
+      <p>Una unidad que se despliega sola y es dueña exclusiva de sus tablas. Nadie más las lee ni las escribe directamente.</p></div>
+    <div><b><span class="dot" style="border-color:var(--doble);background:var(--doble-soft)"></span>Llamada remota síncrona</b>
+      <p>Cada vez que un caso de uso necesita una tabla de otro servicio, espera una respuesta por la red. Suma latencia y suma un punto de falla.</p></div>
+    <div><b><span class="dot" style="border-color:var(--warn);background:var(--warn-soft)"></span>Saga</b>
+      <p>Cuando un caso de uso escribe en dos o más servicios ya no hay <code>COMMIT</code> único: hay pasos locales y compensaciones.</p></div>
+  </div>
+</header>
+
+<!-- ============ CASO ============ -->
+<section class="lab">
+  <div class="lab-head"><span class="lab-num">00</span><h2>Las restricciones que no se negocian</h2></div>
+  <p class="lede">Datos del caso <a href="caso/Caso_Inventarium_HBS.pdf" target="_blank" rel="noopener"><i>Inventarium Corp: elegir el estilo correcto con 6 ingenieros</i></a> (Exhibit 1). Todos los
+  cálculos de esta página se comparan contra estas cifras.</p>
+  <div class="stage">
+    <div class="kpis" style="border-top:0">
+      <div class="kpi"><div class="l">Equipo</div><div class="v">6</div><div class="d">5 desarrolladores y una arquitecta. Sin equipo de plataforma ni DevOps.</div></div>
+      <div class="kpi"><div class="l">Concurrencia normal</div><div class="v">~500</div><div class="d">usuarios simultáneos</div></div>
+      <div class="kpi"><div class="l">Pico promocional</div><div class="v">5.000</div><div class="d">10 veces lo normal, 3 o 4 veces al año (Black Friday)</div></div>
+      <div class="kpi"><div class="l">Latencia objetivo</div><div class="v">&lt; 2 s</div><div class="d">p95 en catálogo y checkout</div></div>
+      <div class="kpi"><div class="l">Disponibilidad</div><div class="v">99,5 %</div><div class="d">mensual. Unos 3 h 36 min de caída permitida al mes.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section class="lab" id="lab1">
+  <div class="lab-head"><span class="lab-num">01</span><h2>Partir: cada tabla tiene un solo dueño</h2></div>
+  <p class="lede">Arrastren cada tabla a un servicio. También pueden hacer clic en una tabla y luego clic en el servicio
+  de destino. Las métricas se recalculan con cada movimiento. Pasen el cursor sobre un caso de uso de la tabla de abajo
+  para ver qué tablas toca: las que escribe quedan en color sólido.</p>
+
+  <div class="stage">
+    <div class="ctl">
+      <span class="eyebrow">Diseños de referencia</span>
+      <span class="seg" id="presetSeg">
+        <button type="button" data-p="vacio">Vacío</button>
+        <button type="button" data-p="monolito">Monolito modular</button>
+        <button type="button" data-p="capas">Por capas técnicas</button>
+        <button type="button" data-p="dominio">Por dominio</button>
+        <button type="button" data-p="nano">Un servicio por tabla</button>
+      </span>
+      <button type="button" id="addSvc">+ Servicio</button>
+      <span class="count" id="assignCount"></span>
+    </div>
+    <div class="ctl">
+      <label>Disponibilidad de cada servicio (%)
+        <input type="number" id="availIn" min="98" max="99.99" step="0.01" value="99.9"></label>
+      <label><input type="checkbox" id="asyncIn"> Pasos diferibles por eventos (factura, notificaciones, agregados)</label>
+    </div>
+    <div class="board">
+      <div class="tray zone" id="tray" data-svc="">
+        <div class="body" style="padding:14px;flex-direction:column;align-items:flex-start">
+          <h5>Sin asignar</h5>
+          <div id="trayChips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          <p class="hint" id="trayHint" style="margin-top:10px"></p>
+        </div>
+      </div>
+      <div class="svcs" id="svcs"></div>
+    </div>
+    <div class="kpis" id="globalKpis"></div>
+    <div class="stage-body">
+      <div class="scroller">
+        <table class="tbl" id="ucTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <details class="how">
+    <summary>Cómo se calcula</summary>
+    <div class="in">
+      <p>Cada caso de uso es una secuencia ordenada de pasos; cada paso lee (<code>r</code>) o escribe (<code>w</code>) una tabla.
+      El <b>servicio de entrada</b> es el dueño de la tabla del primer paso.</p>
+      <ul>
+        <li><b>Servicios tocados</b>: servicios distintos que participan en los pasos síncronos.</li>
+        <li><b>Llamadas remotas</b>: cada bloque de pasos consecutivos que cae en un servicio distinto al de entrada cuenta como
+          una llamada síncrona. Dos pasos seguidos en el mismo servicio remoto viajan en la misma llamada.</li>
+        <li><b>Saga</b>: el caso escribe en tablas de dos o más servicios. Aunque un paso sea asíncrono, sigue siendo parte de
+          la consistencia del caso.</li>
+        <li><b>Disponibilidad compuesta</b> = disponibilidad<sup>servicios tocados</sup>. Si todos deben responder para
+          que el caso funcione, sus probabilidades se multiplican. Con 99,9 %: 1 servicio → 99,90 %; 5 → 99,50 %;
+          10 → 99,00 %. Los terceros (pasarela, transportadora) no se incluyen: son iguales para todos los diseños.</li>
+        <li><b>Latencia p95 estimada</b> = base del caso + 6 ms por paso + 35 ms por llamada remota + latencia de terceros
+          (pasarela 600 ms, transportadora 350 ms). Son órdenes de magnitud para comparar diseños, no una predicción.</li>
+        <li><b>Pasos diferibles por eventos</b>: con la casilla marcada, factura, notificaciones y agregados de ventas se
+          publican como eventos. Salen del camino síncrono (no suman latencia ni disponibilidad) pero siguen exigiendo saga.</li>
+        <li><b>Carga operativa</b> = servicios ÷ personas. Cada servicio trae su pipeline, su base de datos, sus alertas y su
+          guardia. Hasta 1 servicio por cada 2 personas se considera sostenible; hasta 1 por persona, tenso; más, inviable.</li>
+        <li><b>Llamadas remotas por petición</b>: promedio ponderado por la frecuencia de cada caso de uso. Mide cuánto
+          «conversa» el sistema por la red en un día normal.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 02 ============ -->
+<section class="lab" id="lab2">
+  <div class="lab-head"><span class="lab-num">02</span><h2>Caos: seis cosas que sí van a pasar</h2></div>
+  <p class="lede">El docente anuncia una carta. Cada grupo la abre en su copia y la aplica al diseño que dejó en el
+  laboratorio 01. La herramienta calcula el impacto sobre <b>ese</b> diseño y explica por qué. Marquen la carta como
+  aplicada para que quede en la exportación. Si cambian el diseño, el impacto se recalcula.</p>
+
+  <div class="stage">
+    <div class="deck" id="deck"></div>
+    <div class="split">
+      <div class="stage-body" id="cardBody"></div>
+      <div class="rail">
+        <div class="rail-block"><h4>Pregunta para el grupo</h4><p class="narration" id="cardQ"></p></div>
+        <div class="rail-block"><h4>Cartas aplicadas</h4><div class="narration" id="cardApplied"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <details class="how">
+    <summary>Cómo se calcula cada carta</summary>
+    <div class="in">
+      <ul>
+        <li><b>Carga</b> de una tabla = suma, sobre los casos de uso, de frecuencia × multiplicador × veces que el caso toca esa
+          tabla. La carga de un servicio es la suma de sus tablas.</li>
+        <li><b>Black Friday</b>: multiplicadores ×10 en catálogo y detalle, ×5 en checkout y en registro, ×3 en rastreo, ×1 en el resto.
+          Cada servicio arranca con 2 réplicas y necesita <code>⌈2 × factor⌉</code>, donde factor = carga en pico ÷ carga normal.
+          Una réplica carga el código de todas las tablas que el servicio contiene. <b>Módulos escalados de más</b> = suma de las
+          réplicas que recibe cada tabla por encima de las que habría necesitado sola. <b>Unidades de cómputo</b> =
+          réplicas × (1 + tablas del servicio): el 1 es el costo fijo de cada proceso (runtime, agente de métricas, conexión a BD).</li>
+        <li><b>Falla en Pagos</b>: cae el servicio dueño de <code>pago</code>. Todo caso que lo toque de forma síncrona queda
+          fuera; los que solo le publican eventos quedan retrasados.</li>
+        <li><b>Cierre mensual</b>: el reporte lee <code>pedido</code>, <code>item_pedido</code>, <code>producto</code>,
+          <code>categoria</code>, <code>cliente</code> y <code>usuario</code>. La base de datos de cada servicio dueño de esas
+          tablas queda saturada 40 minutos; los casos que tocan esos servicios se degradan.</li>
+        <li><b>Cambio DIAN</b>: la regla nueva vive en <code>factura</code>, <code>item_pedido</code> y <code>precio</code>.
+          Se redespliegan sus dueños; quedan expuestos todos los casos que tocan alguno de ellos.</li>
+        <li><b>Transportadora lenta</b>: la llamada externa pasa de 350 ms a 2.000 ms. Los servicios que la hacen agotan sus
+          hilos; los demás casos que pasan por esos servicios se degradan aunque no llamen a la transportadora.</li>
+        <li><b>El equipo se triplica</b>: 18 personas en 3 squads. Se recalcula la carga operativa y cuántos squads comparten
+          un mismo desplegable.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 03 ============ -->
+<section class="lab" id="lab3">
+  <div class="lab-head"><span class="lab-num">03</span><h2>Saga en vivo: la transacción que ya no existe</h2></div>
+  <p class="lede">Los pasos salen de su diseño: cada bloque de escrituras consecutivas en un mismo servicio es un paso
+  local de la saga. Ordénenlos, decidan cómo se recupera cada uno y escojan dónde falla. El simulador ejecuta la saga y
+  dice si el sistema terminó consistente. No hay un orden único correcto, pero hay órdenes que no tienen arreglo.</p>
+
+  <div class="stage">
+    <div class="ctl">
+      <label>Caso de uso <select id="sagaUc"></select></label>
+      <label>Diseño <select id="sagaDesign">
+        <option value="mine">El de ustedes (laboratorio 01)</option>
+        <option value="dominio">Referencia: por dominio</option>
+      </select></label>
+      <span class="seg" id="sagaMode">
+        <button type="button" data-m="orq">Orquestación</button>
+        <button type="button" data-m="coreo">Coreografía</button>
+      </span>
+    </div>
+    <div class="split">
+      <div class="stage-body">
+        <div id="sagaSteps" class="ssteps"></div>
+        <div style="display:flex;gap:9px;margin-top:14px;flex-wrap:wrap">
+          <button type="button" class="primary" id="sagaRun">Ejecutar saga</button>
+          <button type="button" id="sagaReset">Orden original</button>
+        </div>
+        <div class="trace" id="sagaTrace" hidden></div>
+      </div>
+      <div class="rail">
+        <div class="rail-block"><h4>Resultado</h4><div id="sagaVerdict" class="narration">Ejecuten la saga para ver el resultado.</div></div>
+        <div class="rail-block"><h4>Revisión del diseño</h4><div id="sagaAdvice" class="narration"></div></div>
+        <div class="rail-block"><h4>Este estilo de coordinación</h4><div id="sagaModeNote" class="narration"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Outbox: el error que aparece una vez cada varios miles de pedidos</h3>
+  <p class="lede">Guardar el pedido y publicar el evento <code>PedidoCreado</code> son dos escrituras en dos sistemas distintos
+  (la base de datos y el broker). Si el proceso muere entre una y otra, quedan desalineadas. La simulación procesa 10.000
+  pedidos con la misma semilla para toda la clase: todos los grupos ven los mismos números.</p>
+  <div class="stage">
+    <div class="ctl">
+      <span class="seg" id="obStrat">
+        <button type="button" data-s="commit-publicar">Guardar y luego publicar</button>
+        <button type="button" data-s="publicar-commit">Publicar y luego guardar</button>
+        <button type="button" data-s="outbox">Outbox</button>
+      </span>
+      <label><input type="checkbox" id="obIdem"> Consumidor idempotente (descarta eventos ya procesados)</label>
+      <button type="button" class="primary" id="obRun">Simular 10.000 pedidos</button>
+    </div>
+    <div class="split">
+      <div class="stage-body">
+        <div class="bar"><i id="obBar"></i></div>
+        <div class="counters" id="obCounters"></div>
+        <div class="log" id="obLog"></div>
+      </div>
+      <div class="rail">
+        <div class="rail-block"><h4>Qué está pasando</h4><div class="narration" id="obNarr"></div></div>
+      </div>
+    </div>
+  </div>
+  <details class="how">
+    <summary>Cómo se simula</summary>
+    <div class="in">
+      <p>Generador pseudoaleatorio <code>mulberry32</code> con semilla fija <code>20261117</code>. Por cada pedido se sortean tres
+      eventos independientes, siempre en el mismo orden, así que el mismo pedido falla en las tres estrategias:</p>
+      <ul>
+        <li>El proceso muere entre la primera y la segunda escritura: probabilidad 0,06 %.</li>
+        <li>El relay del outbox publica el evento y muere antes de marcarlo como enviado (lo vuelve a publicar al reiniciar): 0,2 %.</li>
+        <li>El broker entrega el mismo mensaje dos veces (entrega «al menos una vez»): 0,1 %.</li>
+      </ul>
+      <p>Con Outbox el pedido y el evento se guardan en la misma transacción local; un proceso aparte (relay) lee la tabla
+      <code>outbox</code> y publica. Desaparecen los huérfanos y los fantasmas, pero aparecen duplicados: por eso el consumidor
+      tiene que ser idempotente.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 04 ============ -->
+<section class="lab" id="lab4" style="border-bottom:0">
+  <div class="lab-head"><span class="lab-num">04</span><h2>Exportar el trabajo del grupo</h2></div>
+  <p class="lede">El Markdown reúne el mapa de servicios, las métricas, el impacto de las cartas aplicadas, la saga y el
+  resultado del Outbox. Péguenlo en la plantilla de entrega o descárguenlo. El estado de la página se guarda en este
+  navegador: si cierran la pestaña, al volver siguen donde iban.</p>
+  <div class="stage">
+    <div class="ctl">
+      <button type="button" class="primary" id="mdCopy">Copiar Markdown</button>
+      <button type="button" id="mdDown">Descargar .md</button>
+      <button type="button" id="resetAll">Borrar todo y empezar de cero</button>
+      <span class="count" id="mdMsg"></span>
+    </div>
+    <div class="stage-body"><pre id="mdOut" style="max-height:460px;overflow:auto"></pre></div>
+  </div>
+</section>
+
+<footer>
+  <p>Taller del módulo 4 — Arquitecturas: SOA, microservicios y REST. Diplomado en Diseño y Arquitectura de Software,
+  Universidad de La Sabana. Inventarium Corp es una organización simulada con fines pedagógicos.</p>
+  <p>Las cifras son un modelo deliberadamente simple para comparar diseños entre sí. Si un grupo discute una fórmula, esa
+  discusión también es parte del taller: anoten el supuesto que cambiarían y por qué.</p>
+</footer>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   MODELO (sin DOM: se puede probar en Node)
+   ===================================================================== */
+const TEAM_BASE = 6;
+const AVAIL_TARGET = 0.995;
+const LAT_TARGET = 2000;
+const STEP_MS = 6, HOP_MS = 35;
+const EXT = { pasarela: { name: 'pasarela de pagos', lat: 600 }, transportadora: { name: 'transportadora', lat: 350 } };
+
+const TABLES = [
+  { id: 'producto', d: 'Ficha del producto: nombre, marca, descripción, fotos.' },
+  { id: 'categoria', d: 'Árbol de categorías del catálogo.' },
+  { id: 'precio', d: 'Precio vigente, promociones e IVA.' },
+  { id: 'bodega', d: 'Bodegas y su ubicación.' },
+  { id: 'stock', d: 'Existencias disponibles por producto y bodega.' },
+  { id: 'reserva_stock', d: 'Unidades apartadas para pedidos en curso.' },
+  { id: 'movimiento_inventario', d: 'Entradas y salidas físicas de bodega.' },
+  { id: 'cliente', d: 'Datos del cliente y credenciales.' },
+  { id: 'direccion', d: 'Direcciones de entrega del cliente.' },
+  { id: 'usuario', d: 'Empleados y administradores: roles y permisos.' },
+  { id: 'pedido', d: 'Cabecera del pedido y su estado.' },
+  { id: 'item_pedido', d: 'Líneas del pedido: producto, cantidad, precio, IVA.' },
+  { id: 'pago', d: 'Cobros y reembolsos en la pasarela.' },
+  { id: 'factura', d: 'Factura electrónica reportada a la DIAN.' },
+  { id: 'envio', d: 'Solicitudes de recogida a la transportadora.' },
+  { id: 'guia_transportadora', d: 'Número de guía y eventos de rastreo.' },
+  { id: 'notificacion', d: 'Correos y alertas enviados.' },
+  { id: 'venta_diaria', d: 'Agregados de ventas para reportes y dashboards.' }
+];
+const TABLE_IDS = TABLES.map(t => t.id);
+
+/* Pasos: t=tabla, op=r|w, ext=tercero, async=diferible, y metadatos de saga en las escrituras. */
+const UCS = [
+  { id: 'catalogo', name: 'Consultar catálogo', freq: 55, crit: true, base: 120, bf: 10, steps: [
+    { t: 'categoria', op: 'r' }, { t: 'producto', op: 'r' }, { t: 'precio', op: 'r' }, { t: 'stock', op: 'r' } ] },
+  { id: 'detalle', name: 'Ver detalle de producto', freq: 20, crit: true, base: 80, bf: 10, steps: [
+    { t: 'producto', op: 'r' }, { t: 'precio', op: 'r' }, { t: 'stock', op: 'r' }, { t: 'bodega', op: 'r' } ] },
+  { id: 'checkout', name: 'Crear pedido (checkout)', freq: 3, crit: true, base: 250, bf: 5, steps: [
+    { t: 'cliente', op: 'r' }, { t: 'direccion', op: 'r' }, { t: 'precio', op: 'r' },
+    { t: 'pedido', op: 'w', act: 'Crear pedido en estado PENDIENTE', comp: 'Marcar pedido como CANCELADO', evt: 'PedidoCreado',
+      leak: 'Queda un pedido PENDIENTE que nunca se completa; el cliente lo ve en su historial.' },
+    { t: 'item_pedido', op: 'w', act: 'Guardar las líneas del pedido', comp: 'Anular las líneas', evt: 'PedidoCreado',
+      leak: 'Quedan líneas de un pedido que no se completó.' },
+    { t: 'reserva_stock', op: 'w', act: 'Reservar unidades', comp: 'Liberar la reserva', evt: 'StockReservado',
+      leak: 'Quedan unidades reservadas para un pedido que no se completó: el catálogo las muestra agotadas.' },
+    { t: 'pago', op: 'w', ext: 'pasarela', act: 'Cobrar en la pasarela', comp: 'Reembolsar el cobro', evt: 'PagoAprobado',
+      fail: 'permanente', pivot: true, failText: 'la pasarela rechaza la tarjeta',
+      cost: 'El reembolso tarda de 5 a 15 días y la pasarela cobra la comisión de todos modos.',
+      leak: 'Al cliente se le cobró un pedido que no existe.' },
+    { t: 'stock', op: 'w', act: 'Descontar el stock definitivo', comp: 'Reponer el stock', evt: 'StockDescontado',
+      leak: 'Se descontaron unidades de un pedido que no se completó: el inventario queda por debajo del real.' },
+    { t: 'factura', op: 'w', async: true, act: 'Emitir factura electrónica', comp: 'Emitir nota crédito', evt: 'FacturaEmitida',
+      cost: 'La factura ya fue reportada a la DIAN; la nota crédito es un segundo documento tributario.',
+      leak: 'Hay una factura reportada a la DIAN por una venta que no ocurrió.' },
+    { t: 'notificacion', op: 'w', async: true, act: 'Enviar correo de confirmación', comp: null, evt: 'ClienteNotificado',
+      noComp: 'Un correo enviado no se puede retirar.',
+      leak: 'El cliente recibió la confirmación de un pedido que no se completó.' } ] },
+  { id: 'registro', name: 'Registro e inicio de sesión', freq: 9, crit: false, base: 90, bf: 5, steps: [
+    { t: 'cliente', op: 'r' },
+    { t: 'cliente', op: 'w', act: 'Crear el cliente', comp: 'Eliminar el cliente', evt: 'ClienteRegistrado',
+      leak: 'Queda un cliente sin dirección de entrega: no puede comprar.' },
+    { t: 'direccion', op: 'w', act: 'Guardar la dirección', comp: 'Eliminar la dirección', evt: 'DireccionGuardada',
+      leak: 'Queda una dirección de un cliente que no existe.' } ] },
+  { id: 'rastreo', name: 'Rastrear envío', freq: 6, crit: false, base: 80, bf: 3, steps: [
+    { t: 'pedido', op: 'r' }, { t: 'envio', op: 'r' }, { t: 'guia_transportadora', op: 'r', ext: 'transportadora' } ] },
+  { id: 'cancelar', name: 'Cancelar pedido', freq: 0.5, crit: false, base: 150, bf: 1, steps: [
+    { t: 'pedido', op: 'r' },
+    { t: 'pedido', op: 'w', act: 'Marcar pedido como CANCELADO', comp: 'Restaurar el estado anterior', evt: 'PedidoCancelado',
+      leak: 'El pedido figura cancelado, pero el resto del sistema lo sigue tratando como activo.' },
+    { t: 'reserva_stock', op: 'w', act: 'Liberar la reserva', comp: 'Volver a reservar', evt: 'ReservaLiberada',
+      leak: 'Se liberó la reserva de un pedido que sigue activo.' },
+    { t: 'stock', op: 'w', act: 'Reponer las unidades', comp: 'Volver a descontar', evt: 'StockRepuesto',
+      leak: 'El inventario muestra unidades que siguen comprometidas con un pedido activo.' },
+    { t: 'pago', op: 'w', ext: 'pasarela', act: 'Reembolsar el cobro', comp: null, evt: 'ReembolsoHecho', pivot: true,
+      noComp: 'A un cliente no se le vuelve a cobrar sin su autorización.',
+      leak: 'Se reembolsó un pedido que sigue activo y se va a despachar.' },
+    { t: 'factura', op: 'w', async: true, act: 'Emitir nota crédito', comp: null, evt: 'NotaCreditoEmitida',
+      noComp: 'Un documento tributario reportado no se borra.',
+      leak: 'Hay una nota crédito ante la DIAN por un pedido que sigue activo.' },
+    { t: 'notificacion', op: 'w', async: true, act: 'Avisar la cancelación al cliente', comp: null, evt: 'ClienteNotificado',
+      noComp: 'Un correo enviado no se puede retirar.',
+      leak: 'El cliente recibió el aviso de cancelación de un pedido que sigue activo.' } ] },
+  { id: 'despachar', name: 'Despachar pedido', freq: 1.5, crit: false, base: 150, bf: 1, steps: [
+    { t: 'pedido', op: 'r' }, { t: 'item_pedido', op: 'r' }, { t: 'bodega', op: 'r' },
+    { t: 'movimiento_inventario', op: 'w', act: 'Registrar la salida de bodega', comp: 'Registrar una entrada de reversa', evt: 'SalidaRegistrada',
+      leak: 'El inventario registra una salida física que no ocurrió.' },
+    { t: 'envio', op: 'w', ext: 'transportadora', act: 'Solicitar la recogida a la transportadora', comp: 'Anular la recogida', evt: 'RecogidaSolicitada',
+      fail: 'permanente', pivot: true, failText: 'la transportadora no tiene cobertura en ese municipio',
+      cost: 'La transportadora cobra la anulación si el vehículo ya salió.',
+      leak: 'La transportadora va a recoger un paquete que nadie va a entregar.' },
+    { t: 'guia_transportadora', op: 'w', act: 'Guardar el número de guía', comp: 'Borrar la guía', evt: 'GuiaRegistrada',
+      leak: 'Queda una guía sin envío asociado.' },
+    { t: 'notificacion', op: 'w', async: true, act: 'Enviar la guía al cliente', comp: null, evt: 'ClienteNotificado',
+      noComp: 'Un correo enviado no se puede retirar.',
+      leak: 'El cliente recibió la guía de un envío que no salió.' } ] },
+  { id: 'altaProducto', name: 'Registrar producto', freq: 0.5, crit: false, base: 100, bf: 1, steps: [
+    { t: 'usuario', op: 'r' }, { t: 'categoria', op: 'r' },
+    { t: 'producto', op: 'w', act: 'Crear la ficha del producto', comp: 'Eliminar la ficha', evt: 'ProductoCreado',
+      leak: 'Aparece en el catálogo un producto sin precio.' },
+    { t: 'precio', op: 'w', act: 'Registrar precio e IVA', comp: 'Eliminar el precio', evt: 'PrecioRegistrado',
+      leak: 'Hay un precio vigente para un producto sin existencias registradas.' },
+    { t: 'stock', op: 'w', act: 'Registrar el stock inicial', comp: 'Eliminar el stock inicial', evt: 'StockInicialRegistrado',
+      leak: 'Hay existencias de un producto que no aparece en el catálogo.' } ] },
+  { id: 'alerta', name: 'Alerta de stock bajo (tarea periódica)', freq: 2, crit: false, base: 60, bf: 1, steps: [
+    { t: 'stock', op: 'r' }, { t: 'reserva_stock', op: 'r' }, { t: 'producto', op: 'r' },
+    { t: 'notificacion', op: 'w', async: true, act: 'Enviar alerta de stock bajo', comp: null, evt: 'AlertaEnviada',
+      noComp: 'Un correo enviado no se puede retirar.', leak: 'Se envió una alerta que no correspondía.' } ] },
+  { id: 'reporte', name: 'Reporte de ventas y dashboard', freq: 2.5, crit: false, base: 900, bf: 1, steps: [
+    { t: 'usuario', op: 'r' }, { t: 'pedido', op: 'r' }, { t: 'item_pedido', op: 'r' }, { t: 'producto', op: 'r' },
+    { t: 'categoria', op: 'r' }, { t: 'cliente', op: 'r' },
+    { t: 'venta_diaria', op: 'w', async: true, act: 'Actualizar los agregados de ventas', comp: 'Recalcular los agregados', evt: 'AgregadosActualizados',
+      leak: 'Los agregados quedan desalineados con las ventas.' } ] }
+];
+const UC_BY_ID = Object.fromEntries(UCS.map(u => [u.id, u]));
+
+const PRESETS = {
+  vacio: [],
+  monolito: [{ name: 'Inventarium (monolito modular)', tables: TABLE_IDS.slice() }],
+  capas: [
+    { name: 'Datos maestros', tables: ['producto', 'categoria', 'precio', 'bodega', 'cliente', 'direccion', 'usuario'] },
+    { name: 'Transacciones', tables: ['pedido', 'item_pedido', 'stock', 'reserva_stock', 'movimiento_inventario'] },
+    { name: 'Integraciones', tables: ['pago', 'factura', 'envio', 'guia_transportadora', 'notificacion'] },
+    { name: 'Reportes', tables: ['venta_diaria'] } ],
+  dominio: [
+    { name: 'Catálogo', tables: ['producto', 'categoria', 'precio'] },
+    { name: 'Inventario', tables: ['bodega', 'stock', 'reserva_stock', 'movimiento_inventario'] },
+    { name: 'Clientes e identidad', tables: ['cliente', 'direccion', 'usuario'] },
+    { name: 'Pedidos', tables: ['pedido', 'item_pedido'] },
+    { name: 'Pagos', tables: ['pago'] },
+    { name: 'Facturación', tables: ['factura'] },
+    { name: 'Envíos', tables: ['envio', 'guia_transportadora'] },
+    { name: 'Notificaciones', tables: ['notificacion'] },
+    { name: 'Analítica', tables: ['venta_diaria'] } ],
+  nano: TABLE_IDS.map(t => ({ name: t, tables: [t] }))
+};
+const PRESET_LABEL = { vacio: 'Vacío', monolito: 'Monolito modular', capas: 'Por capas técnicas', dominio: 'Por dominio', nano: 'Un servicio por tabla' };
+
+function makeDesign(key) {
+  const d = { services: [], assign: {}, seq: 0 };
+  TABLE_IDS.forEach(t => { d.assign[t] = null; });
+  (PRESETS[key] || []).forEach(p => {
+    const id = 's' + (++d.seq);
+    d.services.push({ id, name: p.name });
+    p.tables.forEach(t => { d.assign[t] = id; });
+  });
+  return d;
+}
+function svcName(d, id) { const s = d.services.find(x => x.id === id); return s ? s.name : '(sin asignar)'; }
+function usedServices(d) { return d.services.filter(s => TABLE_IDS.some(t => d.assign[t] === s.id)); }
+function isComplete(d) { return TABLE_IDS.every(t => d.assign[t]); }
+
+function ucMetrics(d, uc, o) {
+  o = o || {};
+  const avail = o.avail != null ? o.avail : 0.999;
+  const extLat = Object.assign({ pasarela: EXT.pasarela.lat, transportadora: EXT.transportadora.lat }, o.extLat || {});
+  if (uc.steps.some(s => !d.assign[s.t])) return { complete: false };
+  const sync = uc.steps.filter(s => !(o.async && s.async));
+  const entry = d.assign[sync[0].t];
+  const touched = new Set(sync.map(s => d.assign[s.t]));
+  let remote = 0, prev = entry;
+  sync.forEach(s => { const sv = d.assign[s.t]; if (sv !== entry && sv !== prev) remote++; prev = sv; });
+  const writeSvcs = new Set(uc.steps.filter(s => s.op === 'w').map(s => d.assign[s.t]));
+  const asyncSvcs = new Set(uc.steps.filter(s => o.async && s.async).map(s => d.assign[s.t]).filter(sv => !touched.has(sv)));
+  const ext = sync.reduce((a, s) => a + (s.ext ? extLat[s.ext] : 0), 0);
+  const lat = uc.base + STEP_MS * sync.length + HOP_MS * remote + ext;
+  return { complete: true, entry, touched, asyncSvcs, nTouched: touched.size, remote, writeSvcs, nWrite: writeSvcs.size,
+    saga: writeSvcs.size > 1, availability: Math.pow(avail, touched.size), lat };
+}
+
+function opsVerdict(n, team) {
+  const r = n / team;
+  return { ratio: r, sev: n === 0 ? 'neutral' : (r <= 0.5 ? 'ok' : (r <= 1 ? 'warn' : 'bad')) };
+}
+
+function globalMetrics(d, o, team) {
+  team = team || TEAM_BASE;
+  const svcs = usedServices(d);
+  const rows = UCS.map(uc => ({ uc, m: ucMetrics(d, uc, o) }));
+  const done = rows.filter(r => r.m.complete);
+  const totalFreq = done.reduce((a, r) => a + r.uc.freq, 0);
+  const hops = totalFreq ? done.reduce((a, r) => a + r.uc.freq * r.m.remote, 0) / totalFreq : 0;
+  const sagas = done.filter(r => r.m.saga);
+  let worst = null; done.forEach(r => { if (!worst || r.m.availability < worst.m.availability) worst = r; });
+  const failAvail = done.filter(r => r.m.availability < AVAIL_TARGET - 1e-9);
+  const failLat = done.filter(r => r.uc.crit && r.m.lat > LAT_TARGET);
+  const local = totalFreq ? done.filter(r => r.m.nTouched === 1).reduce((a, r) => a + r.uc.freq, 0) / totalFreq : 0;
+  return { nSvcs: svcs.length, ops: opsVerdict(svcs.length, team), rows, done: done.length, hops, sagas, worst, failAvail, failLat, local };
+}
+
+/* ---------- carga y cartas ---------- */
+function tableLoad(mult) {
+  const L = {}; TABLE_IDS.forEach(t => { L[t] = 0; });
+  UCS.forEach(uc => { const m = mult ? (mult[uc.id] || 1) : 1; uc.steps.forEach(s => { L[s.t] += uc.freq * m; }); });
+  return L;
+}
+const BF_MULT = Object.fromEntries(UCS.map(u => [u.id, u.bf]));
+
+function fmtPct(x, dec) { return (x * 100).toFixed(dec == null ? 2 : dec).replace('.', ',') + ' %'; }
+function fmtNum(x, dec) { return Number(x.toFixed(dec || 0)).toLocaleString('es-CO', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }); }
+function ucNames(list) { return list.map(u => u.name).join(', '); }
+function sevMax(a, b) { const o = ['ok', 'neutral', 'warn', 'bad']; return o.indexOf(a) >= o.indexOf(b) ? a : b; }
+
+function touching(d, S, o, includeAsync) {
+  return UCS.filter(uc => {
+    const m = ucMetrics(d, uc, o);
+    if (!m.complete) return false;
+    for (const s of S) { if (m.touched.has(s)) return true; if (includeAsync && m.writeSvcs.has(s)) return true; }
+    return false;
+  });
+}
+
+const CARDS = [
+  { id: 'bf', n: '01', title: 'Black Friday', short: 'El catálogo recibe 10 veces el tráfico normal durante 72 horas.',
+    q: '¿Qué tendrían que escalar y cuánto de lo que escalan no lo necesitaba? ¿Vale la pena separar solo el catálogo?',
+    eval(d, o) {
+      const base = tableLoad(null), peak = tableLoad(BF_MULT);
+      const svcs = usedServices(d);
+      let units = 0, baseUnits = 0, waste = 0, modRep = 0;
+      const per = svcs.map(s => {
+        const ts = TABLE_IDS.filter(t => d.assign[t] === s.id);
+        const Ls = ts.reduce((a, t) => a + base[t], 0), Ps = ts.reduce((a, t) => a + peak[t], 0);
+        const F = Ls ? Ps / Ls : 1;
+        const r = Math.max(2, Math.ceil(2 * F - 1e-9));
+        units += r * (1 + ts.length); baseUnits += 2 * (1 + ts.length); modRep += r * ts.length;
+        let w = 0; const lazy = [];
+        ts.forEach(t => { const Ft = base[t] ? peak[t] / base[t] : 1; const rt = Math.max(2, Math.ceil(2 * Ft - 1e-9)); w += Math.max(0, r - rt); if (r - rt > 0) lazy.push(t); });
+        waste += w;
+        return { s, ts, F, r, w, lazy };
+      });
+      const wPct = modRep ? waste / modRep : 0;
+      const Lall = TABLE_IDS.reduce((a, t) => a + base[t], 0), Pall = TABLE_IDS.reduce((a, t) => a + peak[t], 0);
+      const monoUnits = Math.max(2, Math.ceil(2 * Pall / Lall - 1e-9)) * (1 + TABLE_IDS.length);
+      const pricier = svcs.length > 1 && units > monoUnits;
+      const sev = wPct > 0.3 ? 'bad' : ((wPct > 0.1 || pricier) ? 'warn' : 'ok');
+      const top = per.slice().sort((a, b) => b.w - a.w)[0];
+      const lines = [];
+      lines.push(`Pasan de ${fmtNum(baseUnits)} a ${fmtNum(units)} unidades de cómputo (×${fmtNum(units / baseUnits, 1)}).`);
+      lines.push(`${fmtNum(waste)} de ${fmtNum(modRep)} réplicas de módulo (${fmtPct(wPct, 0)}) son módulos que se escalaron sin necesitarlo.`);
+      if (top && top.w > 0) lines.push(`El mayor desperdicio está en «${top.s.name}»: escala ×${fmtNum(top.F, 1)} por el catálogo y arrastra ${top.lazy.length} tabla(s) que casi no reciben tráfico extra (${top.lazy.slice(0, 5).join(', ')}${top.lazy.length > 5 ? '…' : ''}).`);
+      if (svcs.length > 1) lines.push(`Como un solo desplegable serían ${fmtNum(monoUnits)} unidades. ${pricier ? 'Su diseño desperdicia menos módulos, pero el costo fijo de cada proceso se come el ahorro.' : 'Su diseño sale más barato en el pico que escalar todo junto.'}`);
+      if (svcs.length > 6) lines.push(`Escalar bien tiene otro costo: ${svcs.length} servicios son ${svcs.length} autoescaladores, ${svcs.length} tableros y ${svcs.length} bases de datos que vigilar en la noche del pico, con 6 personas.`);
+      return { sev, head: wPct > 0.3 ? 'Escalan casi todo para servir el catálogo' : (wPct > 0.1 ? 'Escalan de más una parte del sistema' : (pricier ? 'Escala fino, pero sale más caro' : 'Cada parte escala lo que necesita')),
+        lines, table: { cols: ['Servicio', 'Factor', 'Réplicas', 'Módulos de más'], rows: per.map(p => [p.s.name, '×' + fmtNum(p.F, 1), p.r, p.w]) } };
+    } },
+  { id: 'pagos', n: '02', title: 'Falla en Pagos', short: 'Una fuga de memoria en el código de pagos tumba su proceso durante 10 minutos.',
+    q: '¿Por qué una falla en pagos puede tumbar el catálogo? ¿Qué compra el aislamiento y qué cuesta?',
+    eval(d, o) {
+      const s = d.assign.pago;
+      const down = [], late = [];
+      UCS.forEach(uc => { const m = ucMetrics(d, uc, o); if (m.touched.has(s)) down.push(uc); else if (m.writeSvcs.has(s)) late.push(uc); });
+      const lost = down.reduce((a, u) => a + u.freq, 0);
+      const critDown = down.filter(u => u.crit);
+      const sev = down.some(u => u.id === 'catalogo') ? 'bad' : (critDown.length ? 'warn' : 'ok');
+      const lines = [`Cae «${svcName(d, s)}». Quedan fuera ${down.length} casos de uso: ${ucNames(down)}.`,
+        `Eso es el ${fmtPct(lost / 100, 0)} del tráfico durante 10 minutos.`];
+      if (down.some(u => u.id === 'catalogo')) lines.push('El catálogo se cae por un error que está en el código de pagos: comparten proceso. Ese es el aislamiento de fallas que un monolito no da.');
+      else lines.push(`El catálogo sigue arriba: el error queda confinado a «${svcName(d, s)}». Los clientes navegan, pero no pueden pagar.`);
+      const coll = down.filter(u => !u.steps.some(st => st.t === 'pago'));
+      if (coll.length) lines.push(`Caen también ${ucNames(coll)}, que no tienen nada que ver con pagos: comparten proceso con el código que falló.`);
+      if (late.length) lines.push(`Quedan retrasados, no caídos: ${ucNames(late)}. Sus eventos esperan en la cola.`);
+      return { sev, head: sev === 'bad' ? 'Se cae todo, no solo pagos' : (coll.length ? 'La falla arrastra casos ajenos a pagos' : (sev === 'warn' ? 'La falla queda contenida en el checkout' : 'Impacto contenido')), lines };
+    } },
+  { id: 'reporte', n: '03', title: 'Cierre mensual', short: 'Gerencia corre el reporte de ventas del mes en hora pico. La consulta dura 40 minutos.',
+    q: '¿Qué base de datos se satura y qué casos de uso se vuelven lentos? ¿Cómo se lee sin pegarle a las bases operativas?',
+    eval(d, o) {
+      const rep = UC_BY_ID.reporte;
+      const S = new Set(rep.steps.filter(s => s.op === 'r').map(s => d.assign[s.t]));
+      const deg = touching(d, S, o, false).filter(u => u.id !== 'reporte');
+      const crit = deg.filter(u => u.crit);
+      const sev = crit.length ? 'bad' : (deg.length ? 'warn' : 'ok');
+      const lines = [`El reporte lee tablas de ${S.size} servicio(s): ${[...S].map(x => svcName(d, x)).join(', ')}. Sus bases de datos quedan saturadas 40 minutos.`,
+        deg.length ? `Se degradan ${deg.length} casos de uso: ${ucNames(deg)}.` : 'Ningún otro caso de uso se degrada.'];
+      if (crit.length) lines.push(`Incluye ${ucNames(crit)}: la meta de 2 s en p95 no se cumple durante el reporte.`);
+      lines.push('Partir en servicios no resuelve esto por sí solo: si Analítica consulta a los dueños en vivo, satura igual sus bases. Lo que lo resuelve es que Analítica tenga su propia copia, alimentada por eventos o por una réplica de lectura.');
+      return { sev, head: crit.length ? `El reporte frena ${crit.length === 1 ? 'un caso crítico' : crit.length + ' casos críticos'}` : (deg.length ? 'El reporte frena casos secundarios' : 'El reporte no toca la operación'), lines };
+    } },
+  { id: 'dian', n: '04', title: 'Cambio de la DIAN', short: 'Cambia la regla de cálculo del IVA en facturación electrónica. Rige en 15 días.',
+    q: '¿Cuántos servicios hay que redesplegar a la vez? Si la regla vive en tres lugares, ¿quién es su dueño?',
+    eval(d, o) {
+      const T = ['factura', 'item_pedido', 'precio'];
+      const S = new Set(T.map(t => d.assign[t]));
+      const exposed = touching(d, S, o, true);
+      const total = usedServices(d).length;
+      const sev = S.size > 1 ? (S.size / total >= 0.5 ? 'bad' : 'warn') : (exposed.length >= UCS.length * 0.8 ? 'warn' : 'ok');
+      const lines = [`La regla toca ${T.join(', ')}. Hay que redesplegar ${S.size} de ${total} servicio(s): ${[...S].map(x => svcName(d, x)).join(', ')}.`,
+        `Quedan expuestos al despliegue ${exposed.length} de ${UCS.length} casos de uso.`];
+      if (S.size === 1 && total === 1) lines.push('Un solo despliegue, pero de todo el sistema: el catálogo se redespliega por un cambio de impuestos.');
+      if (S.size > 1 && S.size / total >= 0.5) lines.push(`Un cambio de negocio acotado toca ${S.size} de sus ${total} servicios: la frontera no encapsula la regla, la reparte.`);
+      if (S.size > 1) lines.push(`Son ${S.size} despliegues coordinados: si uno sale y otro no, conviven dos reglas de IVA. Hace falta versionar el contrato entre ellos o desplegarlos juntos, y en ese caso se pierde la independencia que justificaba separarlos.`);
+      if (S.size === 1 && total > 1) lines.push('La regla tributaria tiene un solo dueño. Es la señal de una frontera bien trazada para este cambio.');
+      return { sev, head: S.size > 1 ? `Despliegue coordinado de ${S.size} servicios` : (total === 1 ? 'Un despliegue, todo el sistema expuesto' : 'Un solo dueño para la regla'), lines };
+    } },
+  { id: 'transp', n: '05', title: 'Transportadora lenta', short: 'Una transportadora pasa a responder en 2 segundos en vez de 350 ms. No falla: solo tarda.',
+    q: '¿Qué casos de uso se degradan aunque nunca llamen a la transportadora? ¿Qué es un bulkhead?',
+    eval(d, o) {
+      const S = new Set(); UCS.forEach(uc => uc.steps.forEach(s => { if (s.ext === 'transportadora') S.add(d.assign[s.t]); }));
+      const direct = UCS.filter(uc => uc.steps.some(s => s.ext === 'transportadora'));
+      const coll = touching(d, S, o, false).filter(u => !direct.includes(u));
+      const crit = coll.filter(u => u.crit);
+      const sev = crit.length ? 'bad' : (coll.length ? 'warn' : 'ok');
+      const lat = direct.map(u => `${u.name}: ${fmtNum(ucMetrics(d, u, Object.assign({}, o, { extLat: { transportadora: 2000 } })).lat)} ms`);
+      const lines = [`Llaman a la transportadora: ${lat.join('; ')}.`,
+        `Los hilos de ${[...S].map(x => '«' + svcName(d, x) + '»').join(' y ')} quedan esperando respuestas lentas y se agotan.`,
+        coll.length ? `Se degradan por contagio, sin llamar a la transportadora: ${ucNames(coll)}.` : 'Ningún otro caso de uso comparte esos hilos: la lentitud queda contenida.'];
+      if (crit.length) lines.push(`${ucNames(crit)} se vuelve${crit.length > 1 ? 'n' : ''} lento${crit.length > 1 ? 's' : ''} por un tercero que no tiene nada que ver con ${crit.length > 1 ? 'ellos' : 'ese caso'}.`);
+      lines.push('Timeouts cortos, un circuit breaker y un pool de hilos aparte para cada tercero (bulkhead) contienen esto aun dentro de un monolito.');
+      return { sev, head: crit.length ? 'Un tercero lento frena casos críticos' : (coll.length ? 'Contagio limitado' : 'Lentitud contenida'), lines };
+    } },
+  { id: 'equipo', n: '06', title: 'El equipo se triplica', short: 'El próximo año Inventarium pasa a 18 personas organizadas en 3 squads.',
+    q: '¿Cambia la decisión de hoy o solo la migración futura? ¿Cuántos squads comparten un desplegable?',
+    eval(d) {
+      const n = usedServices(d).length, ops = opsVerdict(n, 18);
+      const lines = [`Con 18 personas, ${n} servicio(s) son ${fmtNum(ops.ratio, 2)} servicios por persona.`];
+      let sev = ops.sev;
+      if (n < 3) { sev = sevMax(sev, 'warn'); lines.push(`3 squads comparten ${n === 1 ? 'un solo desplegable' : n + ' desplegables'}: cada despliegue se coordina entre equipos y el tren de releases lo marca el más lento.`); }
+      else if (n <= 9) lines.push('Cada squad puede ser dueño de uno a tres servicios. La frontera organizacional coincide con la técnica.');
+      if (ops.sev === 'bad') lines.push('Aun con el triple de gente, hay más servicios que personas.');
+      const now = opsVerdict(n, TEAM_BASE);
+      lines.push(`Hoy, con 6 personas, la carga es ${fmtNum(now.ratio, 2)} servicios por persona.${now.sev === 'bad' && ops.sev !== 'bad' ? ' Su diseño está pensado para el equipo del año próximo, no para el que tiene que construirlo ahora.' : ''}`);
+      return { sev, head: n < 3 ? 'El desplegable único se vuelve el cuello de botella' : (ops.sev === 'bad' ? 'Sigue habiendo más servicios que personas' : (ops.sev === 'warn' ? 'Un servicio por persona, aun con el triple de equipo' : 'Escala con el equipo')), lines };
+    } }
+];
+const CARD_BY_ID = Object.fromEntries(CARDS.map(c => [c.id, c]));
+
+/* ---------- saga ---------- */
+function sagaGroups(d, uc) {
+  const groups = []; let cur = null;
+  uc.steps.filter(s => s.op === 'w').forEach(s => {
+    const sv = d.assign[s.t];
+    if (cur && cur.svc === sv) cur.writes.push(s);
+    else { cur = { svc: sv, svcName: svcName(d, sv), writes: [s] }; groups.push(cur); }
+  });
+  groups.forEach((g, i) => {
+    g.idx = i;
+    g.label = g.writes.map(w => w.act).join(' + ');
+    g.compensable = g.writes.every(w => w.comp);
+    g.comp = g.compensable ? g.writes.map(w => w.comp).join(' + ') : null;
+    g.permanent = g.writes.some(w => w.fail === 'permanente');
+    g.pivot = g.writes.some(w => w.pivot);
+    g.failText = (g.writes.find(w => w.failText) || {}).failText || 'timeout: el servicio no respondió';
+    g.evt = g.writes[g.writes.length - 1].evt;
+    g.costs = g.writes.filter(w => w.cost).map(w => w.cost);
+    g.noComp = g.writes.filter(w => !w.comp).map(w => w.noComp).filter(Boolean);
+    g.leaks = g.writes.map(w => w.leak);
+    g.tables = g.writes.map(w => w.t);
+  });
+  return groups;
+}
+function sagaUcs(d) { return UCS.filter(uc => { const g = sagaGroups(d, uc); return isComplete(d) && new Set(g.map(x => x.svc)).size > 1; }); }
+function defaultChoice(g) { return g.compensable ? 'comp' : 'nada'; }
+
+function runSaga(groups, choices, failAt, mode) {
+  const T = [], ex = [], comp = [], left = [], costs = [];
+  const orq = mode !== 'coreo';
+  let failed = false, stuck = false;
+  const doLine = (g, i) => orq ? `Orquestador → ${g.svcName}: ${g.label}` :
+    (i === 0 ? `${g.svcName} inicia: ${g.label}` : `${g.svcName} escucha «${groups[i - 1].evt}»: ${g.label}`);
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i], c = choices[i];
+    if (i === failAt) {
+      T.push({ c: 'hit', x: `${doLine(g, i)}  FALLA (${g.failText})` });
+      if (c === 'retry') {
+        if (g.permanent) { T.push({ c: 'hit', x: `  Reintento 1, 2, 3… la respuesta sigue siendo la misma: ${g.failText}.` }); stuck = true; failed = true; break; }
+        T.push({ c: 'run', x: `  Reintento 1: OK${orq ? '' : `  → publica «${g.evt}»`}` }); ex.push(i); continue;
+      }
+      if (!orq) T.push({ c: 'info', x: `${g.svcName} publica «Error: ${g.label.toLowerCase()}»` });
+      failed = true; break;
+    }
+    T.push({ c: 'run', x: `${doLine(g, i)}  OK${orq ? '' : `  → publica «${g.evt}»`}` });
+    ex.push(i);
+  }
+  if (failed && !stuck) {
+    for (let k = ex.length - 1; k >= 0; k--) {
+      const i = ex[k], g = groups[i];
+      if (choices[i] === 'comp' && g.compensable) {
+        T.push({ c: 'comp', x: orq ? `Orquestador → ${g.svcName}: compensa: ${g.comp}` : `${g.svcName} escucha el error y compensa: ${g.comp}` });
+        comp.push(i); g.costs.forEach(x => costs.push(x));
+      } else {
+        T.push({ c: 'left', x: `${g.svcName}: «${g.label}» queda hecho y nadie lo deshace${choices[i] === 'comp' && !g.compensable ? ' (no tiene acción inversa)' : ''}.` });
+        left.push(i);
+      }
+    }
+  }
+  if (stuck) ex.forEach(i => left.push(i));
+  let sev, head; const items = [];
+  if (!failed) { sev = 'ok'; head = failAt < 0 ? 'Camino feliz: todo se completó' : 'Se recuperó hacia adelante'; }
+  else if (stuck) { sev = 'bad'; head = 'Bloqueada en reintentos';
+    items.push('Reintentar no arregla un rechazo definitivo. La saga queda esperando para siempre y los pasos anteriores siguen aplicados.');
+    left.forEach(i => groups[i].leaks.forEach(l => items.push(l))); }
+  else if (left.length) { sev = 'bad'; head = 'Inconsistente'; left.forEach(i => { groups[i].leaks.forEach(l => items.push(l)); groups[i].noComp.forEach(n => items.push(n)); }); }
+  else if (costs.length) { sev = 'warn'; head = 'Consistente, con costo'; costs.forEach(x => items.push(x)); }
+  else { sev = 'ok'; head = ex.length ? 'Consistente: todo se compensó' : 'Consistente: falló el primer paso y no había nada que deshacer'; }
+  return { trace: T, sev, head, items, executed: ex, compensated: comp, leftover: left };
+}
+
+function sagaAdvice(groups, choices) {
+  const out = [];
+  groups.forEach((g, i) => {
+    const after = groups.slice(i + 1);
+    if (!g.compensable && after.some((h, j) => choices[i + 1 + j] !== 'retry'))
+      out.push(`«${g.label}» no se puede deshacer y tiene pasos después que pueden fallar sin reintento. Llévenlo al final, o hagan reintentables los pasos que le siguen.`);
+    if (choices[i] === 'retry' && g.permanent)
+      out.push(`«${g.label}» puede fallar de forma definitiva (${g.failText}). Reintentarlo no sirve: necesita compensación hacia atrás.`);
+    if (choices[i] === 'comp' && !g.compensable)
+      out.push(`Marcaron «compensar» en «${g.label}», pero no existe acción inversa.`);
+  });
+  const p = groups.findIndex(g => g.pivot);
+  if (p >= 0) {
+    const bad = groups.slice(p + 1).filter((g, j) => choices[p + 1 + j] === 'comp');
+    if (bad.length) out.push(`Después del paso pivote («${groups[p].label}») conviene reintentar hacia adelante: compensar ${bad.map(g => '«' + g.label + '»').join(', ')} obliga a deshacer también el pivote.`);
+    const before = groups.slice(0, p).filter(g => g.costs.length);
+    if (before.length) out.push(`${before.map(g => '«' + g.label + '»').join(', ')} va antes del pivote y deshacerlo tiene costo. Si lo pasan después, un rechazo en el pivote no lo obliga a compensar.`);
+  }
+  return out;
+}
+
+/* ---------- outbox ---------- */
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const OB = { N: 10000, seed: 20261117, pCrash: 0.0006, pRelay: 0.002, pRedeliver: 0.001 };
+function simOutbox(strategy, idem) {
+  const rng = mulberry32(OB.seed);
+  const r = { orphan: 0, phantom: 0, dupDelivered: 0, dupProcessed: 0, ok: 0, samples: [] };
+  for (let i = 1; i <= OB.N; i++) {
+    const crash = rng() < OB.pCrash, relay = rng() < OB.pRelay, redeliver = rng() < OB.pRedeliver;
+    const id = 100000 + i;
+    let dup = redeliver;
+    if (strategy === 'commit-publicar' && crash) { r.orphan++; if (r.samples.length < 8) r.samples.push(`Pedido #${id}: guardado; el proceso murió antes de publicar. Nunca se despacha y nadie se entera.`); continue; }
+    if (strategy === 'publicar-commit' && crash) { r.phantom++; if (r.samples.length < 8) r.samples.push(`Pedido #${id}: el evento salió, el pedido no se guardó. Inventario descuenta y Envíos despacha un pedido que no existe.`); continue; }
+    if (strategy === 'outbox' && relay) dup = true;
+    if (dup) { r.dupDelivered++; if (!idem) { r.dupProcessed++; if (r.samples.length < 8) r.samples.push(`Pedido #${id}: «PedidoCreado» llegó dos veces y se procesó dos veces: stock descontado doble.`); } }
+    r.ok++;
+  }
+  return r;
+}
+
+if (typeof module !== 'undefined') module.exports = { TABLES, UCS, PRESETS, CARDS, makeDesign, ucMetrics, globalMetrics, sagaGroups, sagaUcs, runSaga, sagaAdvice, simOutbox, defaultChoice, tableLoad, BF_MULT };
+
+/* =====================================================================
+   INTERFAZ
+   ===================================================================== */
+if (typeof document !== 'undefined') (function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const KEY = 'arq1-partir-monolito-v1';
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let S = load() || fresh();
+  function fresh() {
+    return { design: makeDesign('vacio'), preset: 'vacio', avail: 99.9, async: false, card: 'bf', applied: [], group: '',
+      saga: { uc: 'checkout', src: 'mine', mode: 'orq', order: null, choices: null, fail: -1, sig: '', last: null },
+      ob: { strategy: 'commit-publicar', idem: false, last: null }, theme: null };
+  }
+  function load() { try { const x = JSON.parse(localStorage.getItem(KEY)); return x && x.design ? Object.assign(fresh(), x) : null; } catch (e) { return null; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
+  const opts = () => ({ avail: S.avail / 100, async: S.async });
+
+  /* ---- tema y grupo ---- */
+  if (S.theme) document.documentElement.setAttribute('data-theme', S.theme);
+  $('themeBtn').onclick = () => {
+    const cur = document.documentElement.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    S.theme = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', S.theme); save();
+  };
+  $('groupName').value = S.group || '';
+  $('groupName').oninput = e => { S.group = e.target.value; save(); renderMd(); };
+
+  /* ---- laboratorio 01 ---- */
+  let selChip = null;
+  document.querySelectorAll('#presetSeg button').forEach(b => b.onclick = () => {
+    const used = isComplete(S.design) || TABLE_IDS.some(t => S.design.assign[t]);
+    if (used && S.preset === 'custom' && !confirm('Esto reemplaza el diseño actual del grupo. ¿Continuar?')) return;
+    S.design = makeDesign(b.dataset.p); S.preset = b.dataset.p; selChip = null; changed();
+  });
+  $('addSvc').onclick = () => {
+    if (S.design.services.length >= 20) return;
+    const id = 's' + (++S.design.seq);
+    S.design.services.push({ id, name: 'Servicio ' + (S.design.services.length + 1) });
+    S.preset = 'custom'; changed();
+    setTimeout(() => { const i = document.querySelector(`.zone[data-svc="${id}"] input`); if (i) { i.focus(); i.select(); } }, 0);
+  };
+  $('availIn').value = S.avail;
+  $('availIn').onchange = e => { let v = parseFloat(String(e.target.value).replace(',', '.')); if (!(v >= 90 && v < 100)) v = 99.9; S.avail = v; e.target.value = v; changed(); };
+  $('asyncIn').checked = S.async;
+  $('asyncIn').onchange = e => { S.async = e.target.checked; changed(); };
+
+  function move(t, svc) { S.design.assign[t] = svc || null; S.preset = 'custom'; selChip = null; changed(); }
+  function chip(t) {
+    const info = TABLES.find(x => x.id === t);
+    return `<button type="button" class="tchip${selChip === t ? ' sel' : ''}" draggable="true" data-t="${t}" title="${esc(info.d)}" aria-pressed="${selChip === t}">${t}</button>`;
+  }
+  function renderBoard() {
+    const d = S.design;
+    const tray = TABLE_IDS.filter(t => !d.assign[t]);
+    $('trayChips').innerHTML = tray.map(chip).join('') || '<span class="hint">Todas las tablas tienen dueño.</span>';
+    $('trayHint').textContent = d.services.length ? (selChip ? 'Ahora hagan clic en el servicio de destino (o aquí para devolverla).' : 'Arrastren o hagan clic en una tabla y luego en un servicio.') : 'Escojan un diseño de referencia o creen servicios con «+ Servicio».';
+    $('svcs').innerHTML = d.services.map(s => {
+      const ts = TABLE_IDS.filter(t => d.assign[t] === s.id);
+      return `<div class="zone${selChip ? ' target' : ''}" data-svc="${s.id}">
+        <header><input type="text" value="${esc(s.name)}" aria-label="Nombre del servicio" data-ren="${s.id}">
+        <span class="cnt">${ts.length}</span>
+        <button type="button" class="small" data-del="${s.id}" aria-label="Eliminar servicio ${esc(s.name)}">×</button></header>
+        <div class="body">${ts.map(chip).join('') || '<span class="hint">Suelten tablas aquí.</span>'}</div></div>`;
+    }).join('');
+    $('tray').classList.toggle('target', !!selChip);
+    $('assignCount').textContent = `${TABLE_IDS.length - tray.length}/${TABLE_IDS.length} tablas asignadas · ${usedServices(d).length} servicio(s) con tablas`;
+    document.querySelectorAll('#presetSeg button').forEach(b => b.classList.toggle('on', b.dataset.p === S.preset));
+  }
+  // delegación de eventos del tablero
+  const boardEl = document.querySelector('.board');
+  boardEl.addEventListener('click', e => {
+    const del = e.target.closest('[data-del]');
+    if (del) { const id = del.dataset.del; TABLE_IDS.forEach(t => { if (S.design.assign[t] === id) S.design.assign[t] = null; });
+      S.design.services = S.design.services.filter(s => s.id !== id); S.preset = 'custom'; changed(); return; }
+    const c = e.target.closest('.tchip');
+    if (c) { e.stopPropagation(); selChip = selChip === c.dataset.t ? null : c.dataset.t; renderBoard(); return; }
+    if (e.target.closest('input')) return;
+    const z = e.target.closest('.zone');
+    if (z && selChip) move(selChip, z.dataset.svc);
+  });
+  boardEl.addEventListener('change', e => {
+    const r = e.target.closest('[data-ren]');
+    if (r) { const s = S.design.services.find(x => x.id === r.dataset.ren); if (s) { s.name = r.value.trim().slice(0, 40) || s.name; S.preset = 'custom'; changed(); } }
+  });
+  boardEl.addEventListener('dragstart', e => { const c = e.target.closest('.tchip'); if (c) { e.dataTransfer.setData('text/plain', c.dataset.t); e.dataTransfer.effectAllowed = 'move'; } });
+  boardEl.addEventListener('dragover', e => { const z = e.target.closest('.zone'); if (z) { e.preventDefault(); z.classList.add('over'); } });
+  boardEl.addEventListener('dragleave', e => { const z = e.target.closest('.zone'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('over'); });
+  boardEl.addEventListener('drop', e => { const z = e.target.closest('.zone'); if (!z) return; e.preventDefault(); z.classList.remove('over');
+    const t = e.dataTransfer.getData('text/plain'); if (TABLE_IDS.includes(t)) move(t, z.dataset.svc); });
+
+  function kpi(l, v, dsc, sev) { return `<div class="kpi ${sev || ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${dsc}</div></div>`; }
+  function renderMetrics() {
+    const g = globalMetrics(S.design, opts());
+    const n = g.nSvcs;
+    $('globalKpis').innerHTML = [
+      kpi('Servicios', n, n ? `${fmtNum(g.ops.ratio, 2)} por persona (equipo de 6). ${g.ops.sev === 'ok' ? 'Sostenible.' : g.ops.sev === 'warn' ? 'Tenso: cada persona carga con un servicio.' : 'Inviable sin equipo de plataforma.'}` : 'Aún no hay servicios con tablas.', g.ops.sev),
+      kpi('Casos que exigen saga', g.done ? `${g.sagas.length}/${g.done}` : '—', g.sagas.length ? ucNames(g.sagas.map(r => r.uc)) : 'Ningún caso escribe en más de un servicio.', g.sagas.length > 3 ? 'bad' : g.sagas.length ? 'warn' : 'ok'),
+      kpi('Peor disponibilidad', g.worst ? fmtPct(g.worst.m.availability) : '—', g.worst ? `${g.worst.uc.name}. Meta: 99,50 %.${g.failAvail.length ? ' No la cumplen: ' + ucNames(g.failAvail.map(r => r.uc)) + '.' : ''}` : '', g.worst ? (g.failAvail.length ? 'bad' : g.worst.m.availability < 0.997 ? 'warn' : 'ok') : ''),
+      kpi('Llamadas remotas por petición', g.done ? fmtNum(g.hops, 2) : '—', 'Promedio ponderado por frecuencia de uso.', g.hops > 1.5 ? 'bad' : g.hops > 0.5 ? 'warn' : 'ok'),
+      kpi('Tráfico resuelto en un solo servicio', g.done ? fmtPct(g.local, 0) : '—', 'Peticiones que no salen del servicio de entrada.', g.local < 0.5 ? 'bad' : g.local < 0.8 ? 'warn' : 'ok')
+    ].join('');
+    const head = '<thead><tr><th>Caso de uso</th><th class="n">Frec.</th><th class="n">Servicios</th><th class="n">Llamadas remotas</th><th>Escribe en</th><th class="n">Disponib.</th><th class="n">p95 est.</th></tr></thead>';
+    const body = g.rows.map(({ uc, m }) => {
+      if (!m.complete) return `<tr data-uc="${uc.id}"><td class="name">${esc(uc.name)}<small>${uc.crit ? 'crítico · ' : ''}${uc.steps.length} pasos</small></td><td class="n">${fmtNum(uc.freq, 1)} %</td><td colspan="5" style="color:var(--muted)">Faltan tablas por asignar: ${[...new Set(uc.steps.filter(s => !S.design.assign[s.t]).map(s => s.t))].join(', ')}</td></tr>`;
+      const av = m.availability < AVAIL_TARGET - 1e-9 ? 'bad' : '';
+      const lt = uc.crit && m.lat > LAT_TARGET ? 'bad' : '';
+      const sg = m.saga ? `<span class="pill warn">saga · ${m.nWrite} servicios</span>` : `<span class="pill ok">local · 1</span>`;
+      return `<tr data-uc="${uc.id}"><td class="name">${esc(uc.name)}<small>${uc.crit ? 'crítico · ' : ''}${uc.steps.length} pasos</small></td>
+        <td class="n">${fmtNum(uc.freq, 1)} %</td><td class="n">${m.nTouched}${m.asyncSvcs.size ? ` <span style="color:var(--muted)">+${m.asyncSvcs.size} async</span>` : ''}</td><td class="n">${m.remote}</td><td>${sg}</td>
+        <td class="n ${av}">${fmtPct(m.availability)}</td><td class="n ${lt}">${fmtNum(m.lat)} ms</td></tr>`;
+    }).join('');
+    $('ucTable').innerHTML = head + '<tbody>' + body + '</tbody>';
+  }
+  $('ucTable').addEventListener('mouseover', e => {
+    const tr = e.target.closest('tr[data-uc]'); if (!tr) return;
+    const uc = UC_BY_ID[tr.dataset.uc];
+    document.querySelectorAll('.tchip').forEach(c => {
+      const st = uc.steps.filter(s => s.t === c.dataset.t);
+      c.classList.toggle('hl', st.length > 0 && !st.some(s => s.op === 'w'));
+      c.classList.toggle('hlw', st.some(s => s.op === 'w'));
+    });
+  });
+  $('ucTable').addEventListener('mouseleave', () => document.querySelectorAll('.tchip').forEach(c => c.classList.remove('hl', 'hlw')));
+
+  /* ---- laboratorio 02 ---- */
+  function renderDeck() {
+    $('deck').innerHTML = CARDS.map(c => `<button type="button" class="cardx${S.card === c.id ? ' sel' : ''}" data-card="${c.id}">
+      <span class="cn">CARTA ${c.n}</span><span class="ct">${c.title}</span><span class="cs">${c.short}</span>
+      ${S.applied.includes(c.id) ? '<span class="ap pill doble">aplicada</span>' : ''}</button>`).join('');
+  }
+  $('deck').onclick = e => { const b = e.target.closest('[data-card]'); if (b) { S.card = b.dataset.card; save(); renderCards(); } };
+  function renderCards() {
+    renderDeck();
+    const c = CARD_BY_ID[S.card];
+    $('cardQ').textContent = c.q;
+    $('cardApplied').innerHTML = S.applied.length ? S.applied.map(id => {
+      const r = isComplete(S.design) ? CARD_BY_ID[id].eval(S.design, opts()) : null;
+      return `<div style="margin-bottom:6px"><b>${CARD_BY_ID[id].title}</b> ${r ? `<span class="pill ${r.sev}">${sevWord(r.sev)}</span>` : ''}</div>`;
+    }).join('') : 'Ninguna todavía.';
+    if (!isComplete(S.design)) {
+      $('cardBody').innerHTML = `<p class="eyebrow">Carta ${c.n}</p><h3 style="margin-top:6px">${c.title}</h3><p class="narration" style="margin-top:8px">${c.short}</p>
+        <div class="empty" style="margin-top:16px">Asignen las ${TABLE_IDS.length} tablas en el laboratorio 01 para evaluar el impacto.</div>`;
+      return;
+    }
+    const r = c.eval(S.design, opts());
+    const applied = S.applied.includes(c.id);
+    $('cardBody').innerHTML = `<p class="eyebrow">Carta ${c.n} · ${esc(c.short)}</p>
+      <div class="result ${r.sev}" style="margin-top:10px"><b>${esc(r.head)}</b><span class="pill ${r.sev}">${sevWord(r.sev)}</span></div>
+      <ul class="impact-list">${r.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+      ${r.table ? `<div class="scroller" style="margin-top:14px"><table class="tbl"><thead><tr>${r.table.cols.map((h, i) => `<th${i ? ' class="n"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>${r.table.rows.map(row => `<tr>${row.map((v, i) => `<td class="${i ? 'n' : 'name'}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
+      <div style="margin-top:16px"><button type="button" class="${applied ? '' : 'primary'}" id="applyCard">${applied ? 'Quitar de la exportación' : 'Marcar como aplicada'}</button></div>`;
+    $('applyCard').onclick = () => { S.applied = applied ? S.applied.filter(x => x !== c.id) : S.applied.concat(c.id); save(); renderCards(); renderMd(); };
+  }
+  function sevWord(s) { return { ok: 'resiste', warn: 'con costo', bad: 'grave', neutral: '—' }[s]; }
+
+  /* ---- laboratorio 03: saga ---- */
+  function sagaDesign() { return S.saga.src === 'dominio' ? makeDesign('dominio') : S.design; }
+  function sagaCtx() {
+    const d = sagaDesign();
+    if (!isComplete(d)) return { d, err: 'Asignen todas las tablas en el laboratorio 01, o usen el diseño de referencia por dominio.' };
+    const list = sagaUcs(d);
+    const uc = UC_BY_ID[S.saga.uc];
+    const groups = sagaGroups(d, uc);
+    const sig = S.saga.src + '|' + uc.id + '|' + groups.map(g => g.svc + ':' + g.tables.join(',')).join('/');
+    if (S.saga.sig !== sig || !S.saga.order || S.saga.order.length !== groups.length) {
+      S.saga.sig = sig; S.saga.order = groups.map((g, i) => i); S.saga.choices = groups.map(defaultChoice); S.saga.fail = -1; S.saga.last = null;
+    }
+    const ordered = S.saga.order.map(i => groups[i]);
+    const needs = new Set(groups.map(g => g.svc)).size > 1;
+    return { d, list, uc, groups, ordered, needs };
+  }
+  function renderSaga() {
+    const ctx = sagaCtx();
+    const sel = $('sagaUc');
+    const opts2 = UCS.filter(u => u.steps.filter(s => s.op === 'w').length > 1);
+    sel.innerHTML = opts2.map(u => `<option value="${u.id}"${u.id === S.saga.uc ? ' selected' : ''}>${esc(u.name)}${ctx.list && ctx.list.includes(u) ? ' · exige saga' : ''}</option>`).join('');
+    $('sagaDesign').value = S.saga.src;
+    document.querySelectorAll('#sagaMode button').forEach(b => b.classList.toggle('on', b.dataset.m === S.saga.mode));
+    $('sagaModeNote').innerHTML = S.saga.mode === 'orq'
+      ? '<p>Un <b>orquestador</b> conoce el flujo completo, llama a cada servicio y decide qué compensar. El estado del pedido vive en un solo lugar: fácil de rastrear y de cambiar.</p><p>Costo: el orquestador concentra lógica de negocio y es un servicio más que operar.</p>'
+      : `<p>En <b>coreografía</b> no hay director: cada servicio escucha un evento y publica otro. Agregar un participante no toca a los demás.</p><p>Costo: para saber en qué va un pedido hay que reconstruirlo desde ${ctx.groups ? ctx.groups.length * 2 : 'varios'} tipos de eventos, y el flujo no está escrito en ningún lado.</p>`;
+    if (ctx.err) { $('sagaSteps').innerHTML = `<div class="empty">${ctx.err}</div>`; $('sagaRun').disabled = true; $('sagaAdvice').textContent = ''; return; }
+    $('sagaRun').disabled = false;
+    let pre = '';
+    if (!ctx.needs) pre = `<div class="note" style="margin:0 0 6px">En su diseño «${esc(ctx.uc.name)}» escribe en un solo servicio: es una transacción local con <code>COMMIT</code> y <code>ROLLBACK</code>. No necesita saga. Para practicar, cambien el selector «Diseño» a la referencia por dominio.</div>`;
+    $('sagaSteps').innerHTML = pre + ctx.ordered.map((g, k) => {
+      const ch = S.saga.choices[S.saga.order[k]];
+      return `<div class="sstep${S.saga.fail === k ? ' failsel' : ''}">
+        <span class="ix">${k + 1}</span>
+        <div class="lb">${esc(g.label)} <span class="pill real">${esc(g.svcName)}</span>${g.pivot ? ' <span class="pill doble">pivote</span>' : ''}
+          <small>${g.compensable ? 'Inversa: ' + esc(g.comp) : 'Sin acción inversa' + (g.noComp.length ? ': ' + esc(g.noComp[0]) : '')}${g.permanent ? ' · puede fallar de forma definitiva' : ''}</small></div>
+        <div class="ac">
+          <select data-ch="${k}" aria-label="Recuperación del paso ${k + 1}">
+            <option value="comp"${ch === 'comp' ? ' selected' : ''}>Compensar si algo falla después</option>
+            <option value="retry"${ch === 'retry' ? ' selected' : ''}>Reintentar hacia adelante</option>
+            <option value="nada"${ch === 'nada' ? ' selected' : ''}>Nada</option>
+          </select>
+          <label class="f"><input type="radio" name="sagaFail" data-fail="${k}"${S.saga.fail === k ? ' checked' : ''}> falla aquí</label>
+          <button type="button" class="small" data-up="${k}" ${k === 0 ? 'disabled' : ''} aria-label="Subir">↑</button>
+          <button type="button" class="small" data-down="${k}" ${k === ctx.ordered.length - 1 ? 'disabled' : ''} aria-label="Bajar">↓</button>
+        </div></div>`;
+    }).join('') + `<label class="f" style="font-family:var(--fm);font-size:12px;color:var(--muted);display:flex;gap:6px;margin-top:4px"><input type="radio" name="sagaFail" data-fail="-1"${S.saga.fail === -1 ? ' checked' : ''}> Sin fallo (camino feliz)</label>`;
+    const choices = S.saga.order.map(i => S.saga.choices[i]);
+    const adv = sagaAdvice(ctx.ordered, choices);
+    $('sagaAdvice').innerHTML = adv.length ? adv.map(a => `<p>${esc(a)}</p>`).join('') : '<p>Sin observaciones sobre el orden ni las recuperaciones elegidas.</p>';
+    renderSagaResult();
+  }
+  function renderSagaResult() {
+    const r = S.saga.last;
+    if (!r) { $('sagaTrace').hidden = true; $('sagaVerdict').textContent = 'Ejecuten la saga para ver el resultado.'; return; }
+    $('sagaTrace').hidden = false;
+    $('sagaTrace').innerHTML = r.trace.map(l => `<div class="${l.c}">${esc(l.x)}</div>`).join('');
+    $('sagaVerdict').innerHTML = `<div class="result ${r.sev}"><b>${esc(r.head)}</b></div>${r.items.length ? '<ul class="impact-list">' + r.items.map(i => `<li>${esc(i)}</li>`).join('') + '</ul>' : ''}`;
+  }
+  $('sagaUc').onchange = e => { S.saga.uc = e.target.value; S.saga.sig = ''; save(); renderSaga(); renderMd(); };
+  $('sagaDesign').onchange = e => { S.saga.src = e.target.value; S.saga.sig = ''; save(); renderSaga(); renderMd(); };
+  document.querySelectorAll('#sagaMode button').forEach(b => b.onclick = () => { S.saga.mode = b.dataset.m; S.saga.last = null; save(); renderSaga(); renderMd(); });
+  $('sagaSteps').addEventListener('change', e => {
+    const c = e.target.closest('[data-ch]'); if (c) { S.saga.choices[S.saga.order[+c.dataset.ch]] = c.value; S.saga.last = null; }
+    const f = e.target.closest('[data-fail]'); if (f) { S.saga.fail = +f.dataset.fail; S.saga.last = null; }
+    save(); renderSaga(); renderMd();
+  });
+  $('sagaSteps').addEventListener('click', e => {
+    const u = e.target.closest('[data-up]'), dn = e.target.closest('[data-down]');
+    const k = u ? +u.dataset.up : dn ? +dn.dataset.down : null; if (k == null) return;
+    const j = u ? k - 1 : k + 1, o = S.saga.order;
+    [o[k], o[j]] = [o[j], o[k]];
+    if (S.saga.fail === k) S.saga.fail = j; else if (S.saga.fail === j) S.saga.fail = k;
+    S.saga.last = null; save(); renderSaga(); renderMd();
+  });
+  $('sagaReset').onclick = () => { S.saga.sig = ''; save(); renderSaga(); renderMd(); };
+  let sagaTimer = null;
+  $('sagaRun').onclick = () => {
+    const ctx = sagaCtx(); if (ctx.err) return;
+    const choices = S.saga.order.map(i => S.saga.choices[i]);
+    const r = runSaga(ctx.ordered, choices, S.saga.fail, S.saga.mode);
+    S.saga.last = r; save(); renderMd();
+    clearInterval(sagaTimer);
+    if (reduce) { renderSagaResult(); return; }
+    $('sagaTrace').hidden = false; $('sagaTrace').innerHTML = ''; $('sagaVerdict').textContent = 'Ejecutando…';
+    let i = 0;
+    sagaTimer = setInterval(() => {
+      if (i < r.trace.length) { const l = r.trace[i++]; $('sagaTrace').insertAdjacentHTML('beforeend', `<div class="${l.c}">${esc(l.x)}</div>`); }
+      else { clearInterval(sagaTimer); renderSagaResult(); }
+    }, 380);
+  };
+
+  /* ---- outbox ---- */
+  const OB_TEXT = {
+    'commit-publicar': 'El pedido se guarda con <code>COMMIT</code> y después se publica el evento. Si el proceso muere en medio, el pedido existe pero nadie se entera: <b>pedido huérfano</b>. No hay error en ningún log.',
+    'publicar-commit': 'Se publica el evento y después se guarda el pedido. Si el proceso muere en medio, los demás servicios reaccionan a un pedido que no existe: <b>evento fantasma</b>.',
+    'outbox': 'El pedido y una fila en la tabla <code>outbox</code> se guardan en la <b>misma</b> transacción local. Un relay lee <code>outbox</code> y publica. Ya no hay huérfanos ni fantasmas, pero el relay puede publicar dos veces: entrega «al menos una vez».'
+  };
+  document.querySelectorAll('#obStrat button').forEach(b => b.onclick = () => { S.ob.strategy = b.dataset.s; S.ob.last = null; save(); renderOb(); renderMd(); });
+  $('obIdem').checked = S.ob.idem;
+  $('obIdem').onchange = e => { S.ob.idem = e.target.checked; S.ob.last = null; save(); renderOb(); renderMd(); };
+  function counters(r, partial) {
+    const f = x => fmtNum(partial == null ? x : Math.round(x * partial));
+    return `<div class="counter ${r.orphan ? 'bad' : 'ok'}"><div class="l">Pedidos huérfanos</div><div class="v">${f(r.orphan)}</div></div>
+      <div class="counter ${r.phantom ? 'bad' : 'ok'}"><div class="l">Eventos fantasma</div><div class="v">${f(r.phantom)}</div></div>
+      <div class="counter ${r.dupDelivered ? 'warn' : 'ok'}"><div class="l">Eventos duplicados entregados</div><div class="v">${f(r.dupDelivered)}</div></div>
+      <div class="counter ${r.dupProcessed ? 'bad' : 'ok'}"><div class="l">Duplicados procesados dos veces</div><div class="v">${f(r.dupProcessed)}</div></div>`;
+  }
+  function renderOb() {
+    document.querySelectorAll('#obStrat button').forEach(b => b.classList.toggle('on', b.dataset.s === S.ob.strategy));
+    let t = OB_TEXT[S.ob.strategy];
+    t += S.ob.idem ? ' <p style="margin-top:8px">El consumidor guarda el id de cada evento procesado y descarta los repetidos.</p>' : ' <p style="margin-top:8px">El consumidor procesa todo lo que le llega, aunque ya lo haya visto.</p>';
+    const r = S.ob.last;
+    if (r) {
+      const bad = r.orphan + r.phantom + r.dupProcessed;
+      t += `<p style="margin-top:8px"><b>${bad ? fmtNum(bad) + ' pedidos con efectos incorrectos de 10.000.' : 'Ningún pedido con efectos incorrectos.'}</b> ${bad && bad < 60 ? 'Pocos para verlos en pruebas, suficientes para un reclamo por semana en producción.' : ''}</p>`;
+      $('obCounters').innerHTML = counters(r); $('obBar').style.width = '100%';
+      $('obLog').innerHTML = r.samples.map(s => `<div>${esc(s)}</div>`).join('');
+    } else { $('obCounters').innerHTML = counters({ orphan: 0, phantom: 0, dupDelivered: 0, dupProcessed: 0 }); $('obBar').style.width = '0'; $('obLog').innerHTML = ''; }
+    $('obNarr').innerHTML = t;
+  }
+  $('obRun').onclick = () => {
+    const r = simOutbox(S.ob.strategy, S.ob.idem);
+    S.ob.last = Object.assign({ strategy: S.ob.strategy, idem: S.ob.idem }, r); save(); renderMd();
+    if (reduce) { renderOb(); return; }
+    const t0 = performance.now(), dur = 1400;
+    $('obLog').innerHTML = '';
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      $('obBar').style.width = (p * 100) + '%';
+      $('obCounters').innerHTML = counters(r, p);
+      if (p < 1) requestAnimationFrame(tick); else renderOb();
+    };
+    requestAnimationFrame(tick);
+  };
+
+  /* ---- exportación ---- */
+  function md() {
+    const d = S.design, o = opts(), L = [];
+    const g = globalMetrics(d, o);
+    L.push('# Partir el monolito — Inventarium', '');
+    L.push(`- **Grupo:** ${S.group || '(sin nombre)'}`);
+    L.push(`- **Fecha:** ${new Date().toLocaleDateString('es-CO')}`);
+    L.push(`- **Punto de partida:** ${PRESET_LABEL[S.preset] || 'diseño propio'}`);
+    L.push(`- **Supuestos:** disponibilidad por servicio ${String(S.avail).replace('.', ',')} %; pasos diferibles por eventos: ${S.async ? 'sí' : 'no'}`, '');
+    L.push('## 1. Mapa de servicios', '', '| Servicio | Tablas |', '|---|---|');
+    usedServices(d).forEach(s => L.push(`| ${s.name} | ${TABLE_IDS.filter(t => d.assign[t] === s.id).join(', ')} |`));
+    const un = TABLE_IDS.filter(t => !d.assign[t]);
+    if (un.length) L.push(`| *(sin asignar)* | ${un.join(', ')} |`);
+    L.push('', '## 2. Métricas', '');
+    L.push(`- Servicios: **${g.nSvcs}** (${fmtNum(g.ops.ratio, 2)} por persona, equipo de 6)`);
+    L.push(`- Casos que exigen saga: **${g.sagas.length}/${g.done}**${g.sagas.length ? ' — ' + ucNames(g.sagas.map(r => r.uc)) : ''}`);
+    if (g.worst) L.push(`- Peor disponibilidad: **${fmtPct(g.worst.m.availability)}** (${g.worst.uc.name}); meta 99,50 %`);
+    L.push(`- Llamadas remotas por petición: **${fmtNum(g.hops, 2)}**`);
+    L.push(`- Tráfico resuelto en un solo servicio: **${fmtPct(g.local, 0)}**`, '');
+    L.push('| Caso de uso | Frec. | Servicios | Llamadas remotas | Saga | Disponibilidad | p95 est. |', '|---|--:|--:|--:|---|--:|--:|');
+    g.rows.forEach(({ uc, m }) => L.push(m.complete
+      ? `| ${uc.name}${uc.crit ? ' (crítico)' : ''} | ${fmtNum(uc.freq, 1)} % | ${m.nTouched} | ${m.remote} | ${m.saga ? 'sí (' + m.nWrite + ')' : 'no'} | ${fmtPct(m.availability)} | ${fmtNum(m.lat)} ms |`
+      : `| ${uc.name} | ${fmtNum(uc.freq, 1)} % | — | — | — | — | — |`));
+    L.push('', '## 3. Cartas de caos aplicadas', '');
+    if (!S.applied.length) L.push('Ninguna.');
+    else if (!isComplete(d)) L.push('El diseño está incompleto: no se puede evaluar.');
+    else S.applied.forEach(id => {
+      const c = CARD_BY_ID[id], r = c.eval(d, o);
+      L.push(`### Carta ${c.n} · ${c.title} — ${r.head} (${sevWord(r.sev)})`, '', `> ${c.short}`, '');
+      r.lines.forEach(l => L.push(`- ${l}`));
+      L.push('', `**Respuesta del grupo a «${c.q}»:** _(completar)_`, '');
+    });
+    L.push('', '## 4. Saga', '');
+    const ctx = sagaCtx();
+    if (ctx.err) L.push(ctx.err);
+    else {
+      L.push(`- Caso de uso: **${ctx.uc.name}** · diseño: ${S.saga.src === 'dominio' ? 'referencia por dominio' : 'el del grupo'} · coordinación: ${S.saga.mode === 'orq' ? 'orquestación' : 'coreografía'}`, '');
+      L.push('| # | Paso | Servicio | Recuperación |', '|--:|---|---|---|');
+      const W = { comp: 'compensar', retry: 'reintentar hacia adelante', nada: 'nada' };
+      ctx.ordered.forEach((gg, k) => L.push(`| ${k + 1} | ${gg.label}${gg.pivot ? ' (pivote)' : ''} | ${gg.svcName} | ${W[S.saga.choices[S.saga.order[k]]]} |`));
+      L.push('', `- Fallo inyectado: ${S.saga.fail < 0 ? 'ninguno' : 'paso ' + (S.saga.fail + 1)}`);
+      if (S.saga.last) { L.push(`- Resultado: **${S.saga.last.head}**`); S.saga.last.items.forEach(i => L.push(`  - ${i}`)); }
+      else L.push('- Resultado: (no se ha ejecutado)');
+      const adv = sagaAdvice(ctx.ordered, S.saga.order.map(i => S.saga.choices[i]));
+      if (adv.length) { L.push('- Observaciones de la herramienta:'); adv.forEach(a => L.push(`  - ${a}`)); }
+    }
+    L.push('', '## 5. Outbox', '');
+    const ob = S.ob.last;
+    if (!ob) L.push('No se ha ejecutado la simulación.');
+    else {
+      const N = { 'commit-publicar': 'guardar y luego publicar', 'publicar-commit': 'publicar y luego guardar', outbox: 'Outbox' };
+      L.push(`- Estrategia: **${N[ob.strategy]}** · consumidor idempotente: ${ob.idem ? 'sí' : 'no'} · 10.000 pedidos, semilla ${OB.seed}`);
+      L.push(`- Huérfanos: ${ob.orphan} · fantasmas: ${ob.phantom} · duplicados entregados: ${ob.dupDelivered} · duplicados procesados: ${ob.dupProcessed}`);
+    }
+    L.push('');
+    return L.join('\n');
+  }
+  function renderMd() { $('mdOut').textContent = md(); }
+  $('mdCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText(md()); $('mdMsg').textContent = 'Copiado.'; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($('mdOut')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('mdMsg').textContent = 'Seleccionado: usen Ctrl+C.'; }
+  };
+  $('mdDown').onclick = () => {
+    const b = new Blob([md()], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+    a.download = 'partir_el_monolito_' + ((S.group || 'grupo').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_')) + '.md';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $('resetAll').onclick = () => { if (confirm('Se borra el diseño, las cartas aplicadas, la saga y el Outbox de este navegador. ¿Continuar?')) { localStorage.removeItem(KEY); S = fresh(); location.reload(); } };
+
+  function changed() { save(); renderBoard(); renderMetrics(); renderCards(); renderSaga(); renderMd(); }
+  renderBoard(); renderMetrics(); renderCards(); renderSaga(); renderOb(); renderMd();
+})();
+</script>
+</body>
+</html>
