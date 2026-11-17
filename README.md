@@ -16,8 +16,9 @@ aplican seis eventos de operación real y diseñan la saga que reemplaza a la tr
 
 ## Empiecen aquí
 
-1. **Abran [`partir_el_monolito.html`](partir_el_monolito.html).** Es un solo archivo: se abre con doble
-   clic, sin servidor ni instalación. Funciona en Chrome, Edge y Firefox.
+1. **Abran el taller en línea:** <https://cesaravegaf312.github.io/ARQ1-Taller_Partir_el_Monolito/partir_el_monolito.html>.
+   Si prefieren trabajar sin conexión, descarguen el repositorio y abran [`partir_el_monolito.html`](partir_el_monolito.html)
+   con doble clic: es un solo archivo, sin servidor ni instalación. Funciona en Chrome, Edge y Firefox.
 2. **Escriban el nombre del grupo** en la esquina superior derecha. Aparece en la exportación.
 3. **Trabajen en una sola copia por grupo.** Una persona comparte pantalla en la sala de grupo y las demás
    dictan. El estado se guarda en el navegador de esa persona: si cierra la pestaña, al volver sigue donde iba.
