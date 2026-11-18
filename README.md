@@ -157,3 +157,19 @@ ARQ1-Taller_Partir_el_Monolito/
 ---
 
 *Inventarium Corp es una organización simulada con fines pedagógicos.*
+
+---
+
+## Créditos y uso académico
+
+**Autor:** César Augusto Vega Fernández
+**Programa:** Diplomado en Diseño y Arquitectura de Software, Universidad de La Sabana
+**Año:** 2026
+
+Material académico diseñado por el profesor **César Augusto Vega Fernández** para el módulo de
+estilos y patrones arquitectónicos. Su propósito es exclusivamente educativo.
+
+### Licencia de uso
+
+Este material se distribuye bajo la licencia
+[Creative Commons Atribución-NoComercial-CompartirIgual 4.0 Internacional (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es).
